@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -46,6 +48,29 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    implementation(libs.room.compiler)
+    implementation(libs.sqlcipher)
+    implementation(libs.camera2)
+    implementation(libs.camera.core)
+    implementation(libs.camera.view)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
+    implementation(libs.paging.room)
+    implementation(libs.tink.android)
+    implementation(libs.play.services.nearby)
+    implementation(libs.kable.core)
+
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    ksp(libs.room.compiler)
+
+
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -53,4 +78,6 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+
 }
