@@ -64,6 +64,7 @@ dependencies {
     implementation(libs.tink.android)
     implementation(libs.play.services.nearby)
     implementation(libs.kable.core)
+    implementation(libs.datastore.preferences)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
