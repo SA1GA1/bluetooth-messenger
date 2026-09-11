@@ -1,17 +1,25 @@
 package com.example.bluetooth_messenger.data.local.security
 
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
+import android.security.keystore.KeyProperties
+import com.example.bluetooth_messenger.data.local.security.CryptoConstants.AGREEMENT_KEY_ALIAS
+import com.example.bluetooth_messenger.data.local.security.CryptoConstants.EC_ALGORITHM
+import com.example.bluetooth_messenger.data.local.security.CryptoConstants.EC_CURVE_P256
+import com.example.bluetooth_messenger.data.local.security.CryptoConstants.KEY_STORE_PROVIDER
+import com.example.bluetooth_messenger.data.local.security.CryptoConstants.SIGNING_KEY_ALIAS
 import com.example.bluetooth_messenger.domain.repository.IdentityKeyRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.interfaces.ECPublicKey
+import java.security.spec.ECGenParameterSpec
 import java.security.spec.ECParameterSpec
 
-private const val IDENTITY_KEY_ALIAS = "identity_master_key"
-private const val KEY_STORE_PROVIDER = "AndroidKeyStore"
-
-class IdentityKeyRepositoryImpl: IdentityKeyRepository {
+class IdentityKeyRepositoryImpl : IdentityKeyRepository {
 
     override suspend fun hasIdentityKeys(): Boolean {
         return withContext(Dispatchers.IO) {
@@ -22,21 +30,105 @@ class IdentityKeyRepositoryImpl: IdentityKeyRepository {
                     load(null)
                 }
 
-                val privateKey = keyStore.getKey(IDENTITY_KEY_ALIAS, null) as? PrivateKey
-                val certificate = keyStore.getCertificate(IDENTITY_KEY_ALIAS)
-                val publicKey = certificate?.publicKey as? ECPublicKey
+                val expectedSigningPurposes = KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+                val isSigningKeyValid = checkValidKey(keyStore, SIGNING_KEY_ALIAS, expectedSigningPurposes)
+                if (!isSigningKeyValid) return@withContext false
 
-                if (privateKey == null) return@withContext false
-                if (publicKey == null) return@withContext false
+                val expectedAgreementPurposes = KeyProperties.PURPOSE_AGREE_KEY
+                val isAgreementKeyValid = checkValidKey(keyStore, AGREEMENT_KEY_ALIAS, expectedAgreementPurposes)
 
-                if (publicKey.algorithm != "EC" || privateKey.algorithm != "EC") return@withContext false
+                return@withContext isAgreementKeyValid
 
-                val isP256 = checkIsP256(publicKey.params)
-
-                return@withContext isP256
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 false
             }
+        }
+    }
+
+    override suspend fun generateIdentityKeys() = withContext(Dispatchers.IO) {
+
+        val keyStore: KeyStore = KeyStore.getInstance(KEY_STORE_PROVIDER).apply {
+            load(null)
+        }
+
+        if (hasIdentityKeys()) {
+            return@withContext
+        }
+
+        try {
+
+            if (keyStore.containsAlias(SIGNING_KEY_ALIAS)) keyStore.deleteEntry(SIGNING_KEY_ALIAS)
+            if (keyStore.containsAlias(AGREEMENT_KEY_ALIAS)) keyStore.deleteEntry(AGREEMENT_KEY_ALIAS)
+
+            generateEcP256KeyPair(
+                SIGNING_KEY_ALIAS,
+                KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY,
+                true
+            )
+
+            generateEcP256KeyPair(
+                AGREEMENT_KEY_ALIAS,
+                KeyProperties.PURPOSE_AGREE_KEY,
+                false
+            )
+
+            if (!hasIdentityKeys()) {
+                throw IllegalStateException("generateIdentityKeys error")
+            }
+
+        } catch (e: Exception) {
+
+            try {
+
+                if (keyStore.containsAlias(SIGNING_KEY_ALIAS)) keyStore.deleteEntry(SIGNING_KEY_ALIAS)
+                if (keyStore.containsAlias(AGREEMENT_KEY_ALIAS)) keyStore.deleteEntry(AGREEMENT_KEY_ALIAS)
+
+            } catch (_: Exception) {
+                throw e
+            }
+
+            throw e
+        }
+    }
+
+    private fun generateEcP256KeyPair(alias: String, purposes: Int, includeDigests: Boolean) {
+
+        val keyPairGenerator = KeyPairGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_EC,
+            KEY_STORE_PROVIDER
+        )
+
+        val builder = KeyGenParameterSpec.Builder(alias, purposes)
+            .setAlgorithmParameterSpec(ECGenParameterSpec(EC_CURVE_P256))
+
+        if (includeDigests) {
+            builder.setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+        }
+
+        keyPairGenerator.initialize(builder.build())
+        keyPairGenerator.generateKeyPair()
+    }
+
+    private fun checkValidKey(keyStore: KeyStore, alias: String, expectedPurposes: Int): Boolean {
+        try {
+            if(!keyStore.containsAlias(alias)) return false
+
+            val privateKey = keyStore.getKey(alias, null) as? PrivateKey
+            val certificate = keyStore.getCertificate(alias)
+            val publicKey = certificate?.publicKey as? ECPublicKey
+
+            if (privateKey == null || publicKey == null) return false
+            if (publicKey.algorithm != EC_ALGORITHM || privateKey.algorithm != EC_ALGORITHM) return false
+
+            val factory = KeyFactory.getInstance(privateKey.algorithm, KEY_STORE_PROVIDER)
+            val keyInfo: KeyInfo = factory.getKeySpec(privateKey, KeyInfo::class.java)
+
+            if ((keyInfo.purposes and expectedPurposes) != expectedPurposes) return false
+
+            return checkIsP256(publicKey.params)
+
+        } catch (_: Exception) {
+            return false
         }
     }
 
@@ -45,8 +137,8 @@ class IdentityKeyRepositoryImpl: IdentityKeyRepository {
 
         return try {
             // параметры кривой P-256 от системы
-            val algorithmParameters = java.security.AlgorithmParameters.getInstance("EC").apply {
-                init(java.security.spec.ECGenParameterSpec("secp256r1"))
+            val algorithmParameters = java.security.AlgorithmParameters.getInstance(EC_ALGORITHM).apply {
+                init(java.security.spec.ECGenParameterSpec(EC_CURVE_P256))
             }
 
             val referenceP256Spec = algorithmParameters.getParameterSpec(ECParameterSpec::class.java)
@@ -58,7 +150,7 @@ class IdentityKeyRepositoryImpl: IdentityKeyRepository {
                     params.order == referenceP256Spec.order &&
                     params.cofactor == referenceP256Spec.cofactor
         }
-        catch (e: Exception) {
+        catch (_: Exception) {
             false
         }
     }
