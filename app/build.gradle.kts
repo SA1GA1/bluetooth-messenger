@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.bluetooth_messenger"
     compileSdk {
-        version = release(36) {
+        version = release(37) {
             minorApiLevel = 1
         }
     }
@@ -49,36 +49,34 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
+    implementation(libs.navigation.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.zxing)
+
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    implementation(libs.room.compiler)
     implementation(libs.sqlcipher)
     implementation(libs.camera2)
     implementation(libs.camera.core)
     implementation(libs.camera.view)
     implementation(libs.camera.lifecycle)
-    implementation(libs.mlkit.barcode.scanning)
     implementation(libs.paging.runtime)
     implementation(libs.paging.compose)
     implementation(libs.paging.room)
-    implementation(libs.tink.android)
-    implementation(libs.play.services.nearby)
-    implementation(libs.kable.core)
+
     implementation(libs.datastore.preferences)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)
-
-
-
     testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-
-
 }
+
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
