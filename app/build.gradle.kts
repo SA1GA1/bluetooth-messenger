@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.bluetooth_messenger"
     compileSdk {
-        version = release(36) {
+        version = release(37) {
             minorApiLevel = 1
         }
     }
@@ -51,19 +51,15 @@ dependencies {
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    implementation(libs.room.compiler)
     implementation(libs.sqlcipher)
     implementation(libs.camera2)
     implementation(libs.camera.core)
     implementation(libs.camera.view)
     implementation(libs.camera.lifecycle)
-    implementation(libs.mlkit.barcode.scanning)
     implementation(libs.paging.runtime)
     implementation(libs.paging.compose)
     implementation(libs.paging.room)
-    implementation(libs.tink.android)
-    implementation(libs.play.services.nearby)
-    implementation(libs.kable.core)
+
     implementation(libs.datastore.preferences)
 
     implementation(libs.hilt.android)
