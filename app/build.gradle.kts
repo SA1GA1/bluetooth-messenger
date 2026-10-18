@@ -49,6 +49,11 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
+    implementation(libs.navigation.compose)
+    implementation(libs.lifecycle.process)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.zxing)
+
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.sqlcipher)
@@ -69,6 +74,7 @@ dependencies {
 
 
     testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -78,3 +84,5 @@ dependencies {
 
 
 }
+
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
