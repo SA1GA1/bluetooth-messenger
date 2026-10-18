@@ -9,3 +9,5 @@ Task 1: in progress.
 Build foundation: assembleDebug, testDebugUnitTest, lintDebug PASS (2026-10-16).
 Session policy: RED 3/7 failures → GREEN 7/7; full unit suite PASS.
 Ruling: PIN is required after foreground idle timeout; biometric resume only follows a previously unlocked session.
+
+Validation correction: overlapping Gradle invocations caused a transient missing-style AAPT failure; all subsequent builds are serialized.
