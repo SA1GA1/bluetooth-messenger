@@ -15,3 +15,8 @@ Validation correction: overlapping Gradle invocations caused a transient missing
 Task 1: complete; supported SQLCipher 4.19.1, ZXing 3.5.3, Navigation 2.9.8, SDK 37.1/min 31.
 Hilt application compiled. Security/framing: RED 12 failures on stubs → GREEN all 24 unit tests.
 Task 2: interfaces complete, fake transport and session integration pending.
+
+Task 4 (identity slice): hardware-only signing/agreement repository compiles; device round-trip instrumentation added, NOT RUN.
+Ruling: generated artifacts moved to /private/tmp/offgrid-build via an untracked init script for this session; duplicated XML/cache directories in app/build broke resource parsing and clean. Source/default build configuration unchanged.
+Checkpoint: external build assembleDebug/testDebugUnitTest/lintDebug PASS, 29 unit tests, 0 failures. SQLCipher arm64/x86_64 LOAD alignments 16384 verified.
+Ruling: crypto/protocol work precedes radio acceptance because a second physical phone is unavailable; no radio acceptance claims.
