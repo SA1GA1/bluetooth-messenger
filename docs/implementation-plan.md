@@ -8,7 +8,7 @@ One small independently verified change per commit; push after coherent batches 
 Preserve existing user changes, no blanket staging, no force push.
 
 ## Tasks
-- [ ] 1. Contract, dependency alignment, working debug build/tests/lint.
+- [x] 1. Contract, dependency alignment, working debug build/tests/lint.
 - [ ] 2. Hilt application, domain contracts, errors, fake transport.
 - [ ] 3. Runtime permissions, BLE discovery, GATT framing, Wi-Fi Direct transfer.
 - [ ] 4. Identity keys, encrypted database secret, PIN/biometric/session lifecycle.

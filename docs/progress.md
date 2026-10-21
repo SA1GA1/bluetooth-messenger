@@ -20,3 +20,13 @@ Task 4 (identity slice): hardware-only signing/agreement repository compiles; de
 Ruling: generated artifacts moved to /private/tmp/offgrid-build via an untracked init script for this session; duplicated XML/cache directories in app/build broke resource parsing and clean. Source/default build configuration unchanged.
 Checkpoint: external build assembleDebug/testDebugUnitTest/lintDebug PASS, 29 unit tests, 0 failures. SQLCipher arm64/x86_64 LOAD alignments 16384 verified.
 Ruling: crypto/protocol work precedes radio acceptance because a second physical phone is unavailable; no radio acceptance claims.
+
+Storage: Room/SQLCipher instrumentation RED 4/5 failures → GREEN 5/5 (queue atomicity, deduplication, recipient Ack, restart/retry, encrypted header/wrong key, history reset).
+PIN envelope: RED 4 failures → GREEN 41 unit tests. PBKDF2-HMAC-SHA256 210000 iterations + AES-GCM; outer protection uses a non-exportable Keystore AES key.
+Vault/session mutation check: removing secret clearing produced 2/4 instrumentation failures; restoration pending GREEN.
+BLE implementation compiles; no physical interoperability acceptance. Beacon uses private test manufacturer 0xffff plus app UUID in scan response, full UUID fits legacy advertising size.
+
+Vault/session GREEN: 4/4 emulator tests; storage 5/5; unit suite 41/41. Lint identified missing coarse-location declaration alongside fine; fixed before next checkpoint.
+
+Session completion epochs: RED delayed-auth test → GREEN 42/42 unit tests.
+Checkpoint: storage/vault instrumentation 9/9 PASS; lint 0 errors (15 warnings, mostly dependency update recommendations); native BLE service waits for service registration and rejects callbacks from stopped generations.

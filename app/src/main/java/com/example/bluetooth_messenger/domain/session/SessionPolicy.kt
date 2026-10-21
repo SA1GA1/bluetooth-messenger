@@ -8,18 +8,27 @@ class SessionPolicy {
     var requiredMethod: UnlockMethod = UnlockMethod.Pin
         private set
     private var lastInteractionMillis = 0L
+    @Volatile private var generation = 0L
+    @Volatile private var inForeground = true
+    @Synchronized fun beginUnlock(): Long = ++generation
+    fun canCompleteUnlock(token: Long): Boolean = inForeground && token == generation && !unlocked
+    fun foreground() { inForeground = true }
+
 
     fun unlock() {
         unlocked = true
     }
 
-    fun background(biometricsEnabled: Boolean) {
+    @Synchronized fun background(biometricsEnabled: Boolean) {
+        inForeground = false
+        generation++
         if (!unlocked) return
         unlocked = false
         requiredMethod = if (biometricsEnabled) UnlockMethod.Biometric else UnlockMethod.Pin
     }
 
-    fun biometricFailed() {
+    @Synchronized fun biometricFailed() {
+        generation++
         unlocked = false
         requiredMethod = UnlockMethod.Pin
     }

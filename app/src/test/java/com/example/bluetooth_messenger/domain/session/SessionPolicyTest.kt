@@ -50,6 +50,16 @@ class SessionPolicyTest {
         assertFalse(policy.unlocked)
     }
 
+    @Test fun delayedAuthenticationCannotUnlockAfterBackgroundAndReturn() {
+        val policy = SessionPolicy()
+        val token = policy.beginUnlock()
+        policy.background(false)
+        assertFalse(policy.canCompleteUnlock(token))
+        policy.foreground()
+        assertFalse(policy.canCompleteUnlock(token))
+        assertTrue(policy.canCompleteUnlock(policy.beginUnlock()))
+    }
+
     @Test fun unsupportedTimeoutIsRejected() {
         assertThrows(IllegalArgumentException::class.java) {
             SessionPolicy().checkIdle(0, 2)
