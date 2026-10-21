@@ -6,6 +6,7 @@ import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import com.example.bluetooth_messenger.domain.model.PeerIdentity
 import com.example.bluetooth_messenger.domain.repository.IdentityKeyRepository
+import com.example.bluetooth_messenger.domain.repository.IdentityCrypto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -23,7 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class KeystoreIdentityRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-) : IdentityKeyRepository {
+) : IdentityKeyRepository, IdentityCrypto {
     private val mutex = Mutex()
     private val preferences = context.getSharedPreferences("identity", Context.MODE_PRIVATE)
     private val crypto = MessageCrypto()
@@ -58,7 +59,7 @@ class KeystoreIdentityRepository @Inject constructor(
         }
     }
 
-    suspend fun identity(): PeerIdentity = withContext(Dispatchers.IO) {
+    override suspend fun identity(): PeerIdentity = withContext(Dispatchers.IO) {
         val userId = checkNotNull(preferences.getString("user_id", null)) { "Идентичность не создана" }
         val store = store()
         validate(store, SIGNING)
@@ -67,11 +68,11 @@ class KeystoreIdentityRepository @Inject constructor(
             store.getCertificate(AGREEMENT).publicKey.encoded)
     }
 
-    suspend fun sign(bytes: ByteArray): ByteArray = withContext(Dispatchers.IO) {
+    override suspend fun sign(bytes: ByteArray): ByteArray = withContext(Dispatchers.IO) {
         crypto.sign(bytes, privateKey(SIGNING))
     }
 
-    suspend fun decrypt(bytes: ByteArray, associatedData: ByteArray): ByteArray = withContext(Dispatchers.IO) {
+    override suspend fun decrypt(bytes: ByteArray, associatedData: ByteArray): ByteArray = withContext(Dispatchers.IO) {
         crypto.decrypt(bytes, privateKey(AGREEMENT), associatedData)
     }
 
