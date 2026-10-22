@@ -129,6 +129,12 @@ class PinVault @Inject constructor(@ApplicationContext private val context: Cont
     }
 
     @Synchronized
+    fun cancelBiometricOperation() {
+        biometricCipher = null
+        enrolling = false
+    }
+
+    @Synchronized
     fun disableBiometrics() {
         check(secret != null)
         check(preferences.edit().remove("biometric").commit())
