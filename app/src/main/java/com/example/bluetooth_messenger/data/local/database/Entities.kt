@@ -21,6 +21,7 @@ data class ConversationEntity(
     val type: String,
     val name: String,
     val ownerId: String? = null,
+    val peerId: String? = null,
     val epoch: Int = 0,
     val updatedAt: Long = 0,
     val active: Boolean = true,
@@ -46,6 +47,7 @@ data class MessageEntity(
     val mimeType: String? = null,
     val progress: Int = 0,
     val error: String? = null,
+    val epoch: Int = 0,
 )
 
 @Entity(tableName = "pending_queue", primaryKeys = ["packetId", "targetId"], indices = [Index("messageId")])
@@ -57,4 +59,51 @@ data class OutboxEntity(
     val status: String = "Pending",
     val sentAt: Long = 0,
     val attempts: Int = 0,
+    val controlScope: String? = null,
+    val wireKind: String = "Direct",
 )
+
+@Entity(tableName = "pairings")
+data class PairingEntity(
+    @PrimaryKey val peerId: String,
+    val pairingId: String,
+    val identity: String,
+    val name: String,
+    val nonceA: ByteArray,
+    val nonceB: ByteArray?,
+    val initiator: Boolean,
+    val localConfirmed: Boolean = false,
+    val remoteConfirmed: Boolean = false,
+    val completed: Boolean = false,
+    val rejected: Boolean = false,
+    val expiresAt: Long,
+)
+
+@Entity(tableName = "group_members", primaryKeys = ["groupId", "epoch", "memberId"], indices = [Index("groupId")],
+    foreignKeys = [ForeignKey(entity = ConversationEntity::class, parentColumns = ["id"], childColumns = ["groupId"], onDelete = ForeignKey.CASCADE)])
+data class GroupMemberEntity(val groupId: String, val epoch: Int, val memberId: String, val identity: String)
+
+@Entity(tableName = "group_keys", primaryKeys = ["groupId", "epoch"], indices = [Index("groupId")],
+    foreignKeys = [ForeignKey(entity = ConversationEntity::class, parentColumns = ["id"], childColumns = ["groupId"], onDelete = ForeignKey.CASCADE)])
+data class GroupKeyEntity(val groupId: String, val epoch: Int, val wrappedKey: ByteArray)
+
+@Entity(tableName = "public_messages")
+data class PublicMessageEntity(@PrimaryKey val id: String, val senderId: String, val text: String, val timestamp: Long, val expiresAt: Long)
+
+data class MessageRow(
+    @androidx.room.Embedded val message: MessageEntity,
+    val deliveredCount: Int,
+    val targetCount: Int,
+    val readCount: Int,
+    val errorCount: Int,
+    val sentCount: Int,
+)
+
+data class ConversationRow(
+    @androidx.room.Embedded val conversation: ConversationEntity,
+    val lastText: String?,
+    val unreadCount: Int,
+)
+
+@Entity(tableName = "received_ids")
+data class ReceivedMessageEntity(@PrimaryKey val id: String, val senderId: String, val conversationId: String)
