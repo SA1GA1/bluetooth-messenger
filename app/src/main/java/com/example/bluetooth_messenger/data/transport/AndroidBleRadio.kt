@@ -11,6 +11,7 @@ import android.os.SystemClock
 import com.example.bluetooth_messenger.domain.model.DiscoveredPeer
 import com.example.bluetooth_messenger.domain.transport.DiscoveryService
 import com.example.bluetooth_messenger.domain.transport.PeerTransport
+import com.example.bluetooth_messenger.domain.transport.PeerUnavailableException
 import com.example.bluetooth_messenger.domain.transport.TransportEvent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -127,8 +128,8 @@ class AndroidBleRadio @Inject constructor(@ApplicationContext private val contex
     }
 
     override suspend fun send(peerId: String, packet: ByteArray) {
-        check(ownId != null) { "Связь приостановлена" }
-        val peer = peers.value.firstOrNull { it.userId == peerId } ?: error("Получатель вне зоны")
+        if (ownId == null) throw PeerUnavailableException("Связь приостановлена")
+        val peer = peers.value.firstOrNull { it.userId == peerId } ?: throw PeerUnavailableException("Получатель вне зоны")
         sender.send(manager.adapter.getRemoteDevice(peer.address), packet)
     }
 

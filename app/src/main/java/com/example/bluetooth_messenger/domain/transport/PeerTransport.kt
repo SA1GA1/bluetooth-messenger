@@ -20,3 +20,5 @@ interface PeerTransport {
     suspend fun send(peerId: String, packet: ByteArray)
     fun stop()
 }
+
+class PeerUnavailableException(message: String) : IllegalStateException(message)
