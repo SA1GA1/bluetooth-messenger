@@ -28,7 +28,7 @@ class PacketQueue @Inject constructor(private val database: DatabaseSession, pri
         catch (_: Exception) { }
     }
 
-    suspend fun flush(peers: List<String>) {
+    suspend fun flush(peers: List<String>, canSend: suspend (WirePacket, String) -> Boolean = { _, _ -> true }) {
         if (!sending.tryLock()) return
         try {
             for (peer in peers) {
@@ -36,6 +36,7 @@ class PacketQueue @Inject constructor(private val database: DatabaseSession, pri
                 val deliveries = database.use { it.messages().pending(peer) }
                 for (delivery in deliveries) {
                     try {
+                        if (!canSend(codec.decode(delivery.packet), peer)) continue
                         transport.send(peer, delivery.packet)
                         database.use { it.messages().sent(delivery.packetId, peer, clock.wallMillis()) }
                     } catch (failure: CancellationException) { throw failure }
