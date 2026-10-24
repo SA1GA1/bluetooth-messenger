@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "d6e2e6664e18c1fee6c9935c7d25844f",
+    "identityHash": "29589b2ab5fe352dcdb05d144472c8e4",
     "entities": [
       {
         "tableName": "contacts",
@@ -54,7 +54,7 @@
       },
       {
         "tableName": "conversations",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `type` TEXT NOT NULL, `name` TEXT NOT NULL, `ownerId` TEXT, `peerId` TEXT, `epoch` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `active` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `type` TEXT NOT NULL, `name` TEXT NOT NULL, `ownerId` TEXT, `peerId` TEXT, `epoch` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `active` INTEGER NOT NULL, `leftAtEpoch` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -99,6 +99,12 @@
           {
             "fieldPath": "active",
             "columnName": "active",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "leftAtEpoch",
+            "columnName": "leftAtEpoch",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -406,7 +412,7 @@
       },
       {
         "tableName": "group_members",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `epoch` INTEGER NOT NULL, `memberId` TEXT NOT NULL, `identity` TEXT NOT NULL, PRIMARY KEY(`groupId`, `epoch`, `memberId`), FOREIGN KEY(`groupId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `epoch` INTEGER NOT NULL, `memberId` TEXT NOT NULL, `identity` TEXT NOT NULL, `joinedEpoch` INTEGER NOT NULL, PRIMARY KEY(`groupId`, `epoch`, `memberId`), FOREIGN KEY(`groupId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "groupId",
@@ -430,6 +436,12 @@
             "fieldPath": "identity",
             "columnName": "identity",
             "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "joinedEpoch",
+            "columnName": "joinedEpoch",
+            "affinity": "INTEGER",
             "notNull": true
           }
         ],
@@ -468,7 +480,7 @@
       },
       {
         "tableName": "group_keys",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `epoch` INTEGER NOT NULL, `wrappedKey` BLOB NOT NULL, PRIMARY KEY(`groupId`, `epoch`), FOREIGN KEY(`groupId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `epoch` INTEGER NOT NULL, `wrappedKey` BLOB NOT NULL, `rosterHash` BLOB NOT NULL, PRIMARY KEY(`groupId`, `epoch`), FOREIGN KEY(`groupId`) REFERENCES `conversations`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "groupId",
@@ -485,6 +497,12 @@
           {
             "fieldPath": "wrappedKey",
             "columnName": "wrappedKey",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rosterHash",
+            "columnName": "rosterHash",
             "affinity": "BLOB",
             "notNull": true
           }
@@ -523,7 +541,7 @@
       },
       {
         "tableName": "public_messages",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `senderId` TEXT NOT NULL, `text` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `expiresAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `senderId` TEXT NOT NULL, `text` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `expiresAt` INTEGER NOT NULL, `mine` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -552,6 +570,12 @@
           {
             "fieldPath": "expiresAt",
             "columnName": "expiresAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mine",
+            "columnName": "mine",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -596,7 +620,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd6e2e6664e18c1fee6c9935c7d25844f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '29589b2ab5fe352dcdb05d144472c8e4')"
     ]
   }
 }

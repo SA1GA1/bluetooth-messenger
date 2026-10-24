@@ -56,6 +56,12 @@ abstract class MessageDao {
     @Query("SELECT * FROM pending_queue WHERE messageId = :message")
     abstract suspend fun deliveryList(message: String): List<OutboxEntity>
 
+    @Query("UPDATE pending_queue SET status='Error', packet=X'' WHERE messageId IN (SELECT id FROM messages WHERE conversationId=:group) AND targetId NOT IN (:members) AND status IN ('Pending','Sent','Error')")
+    abstract suspend fun cancelExcluded(group: String, members: List<String>)
+
+    @Query("DELETE FROM pending_queue WHERE controlScope=:group AND targetId NOT IN (:members)")
+    abstract suspend fun cancelExcludedControl(group: String, members: List<String>)
+
     @Query("UPDATE pending_queue SET status = 'Read', packet = X'' WHERE packetId = :packet AND targetId = :target")
     abstract suspend fun readDelivery(packet: String, target: String)
 

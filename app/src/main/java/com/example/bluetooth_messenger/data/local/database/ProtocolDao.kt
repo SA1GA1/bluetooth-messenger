@@ -18,6 +18,7 @@ interface ProtocolDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun saveGroupKey(key: GroupKeyEntity)
     @Query("SELECT * FROM group_keys WHERE groupId = :group AND epoch = :epoch") suspend fun groupKey(group: String, epoch: Int): GroupKeyEntity?
     @Query("UPDATE conversations SET epoch = :epoch, active = :active WHERE id = :group AND epoch <= :epoch") suspend fun updateGroup(group: String, epoch: Int, active: Boolean)
+    @Query("UPDATE conversations SET active = 0, leftAtEpoch = epoch WHERE id = :group") suspend fun leaveLocally(group: String)
     @Query("SELECT * FROM public_messages WHERE expiresAt > :now ORDER BY timestamp ASC") fun publicMessages(now: Long): Flow<List<PublicMessageEntity>>
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun savePublic(message: PublicMessageEntity)
     @Query("DELETE FROM public_messages WHERE expiresAt <= :now") suspend fun expirePublic(now: Long)

@@ -25,6 +25,7 @@ data class ConversationEntity(
     val epoch: Int = 0,
     val updatedAt: Long = 0,
     val active: Boolean = true,
+    val leftAtEpoch: Int = 0,
 )
 
 @Entity(tableName = "messages", indices = [Index(value = ["conversationId", "receivedAt"])],
@@ -81,14 +82,14 @@ data class PairingEntity(
 
 @Entity(tableName = "group_members", primaryKeys = ["groupId", "epoch", "memberId"], indices = [Index("groupId")],
     foreignKeys = [ForeignKey(entity = ConversationEntity::class, parentColumns = ["id"], childColumns = ["groupId"], onDelete = ForeignKey.CASCADE)])
-data class GroupMemberEntity(val groupId: String, val epoch: Int, val memberId: String, val identity: String)
+data class GroupMemberEntity(val groupId: String, val epoch: Int, val memberId: String, val identity: String, val joinedEpoch: Int = 1)
 
 @Entity(tableName = "group_keys", primaryKeys = ["groupId", "epoch"], indices = [Index("groupId")],
     foreignKeys = [ForeignKey(entity = ConversationEntity::class, parentColumns = ["id"], childColumns = ["groupId"], onDelete = ForeignKey.CASCADE)])
-data class GroupKeyEntity(val groupId: String, val epoch: Int, val wrappedKey: ByteArray)
+data class GroupKeyEntity(val groupId: String, val epoch: Int, val wrappedKey: ByteArray, val rosterHash: ByteArray)
 
 @Entity(tableName = "public_messages")
-data class PublicMessageEntity(@PrimaryKey val id: String, val senderId: String, val text: String, val timestamp: Long, val expiresAt: Long)
+data class PublicMessageEntity(@PrimaryKey val id: String, val senderId: String, val text: String, val timestamp: Long, val expiresAt: Long, val mine: Boolean = false)
 
 data class MessageRow(
     @androidx.room.Embedded val message: MessageEntity,

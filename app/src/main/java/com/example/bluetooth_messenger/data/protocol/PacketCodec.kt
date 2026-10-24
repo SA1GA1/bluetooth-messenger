@@ -7,7 +7,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.util.UUID
 
-enum class PacketKind { PairRequest, PairAccept, PairConfirm, PairDone, Direct, Ack, Read, GroupRoster, GroupKey, GroupMessage, FileOffer, FileReady, FileAck, Public }
+enum class PacketKind { PairRequest, PairAccept, PairConfirm, PairDone, Direct, Ack, Read, GroupRoster, GroupLeave, GroupMessage, FileOffer, FileReady, FileAck, Public, GroupReady }
 
 data class WirePacket(
     val kind: PacketKind,
