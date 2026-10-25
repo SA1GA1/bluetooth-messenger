@@ -15,5 +15,5 @@ internal fun MessageRow.toDomain(): ChatMessage {
     }
     return ChatMessage(message.id, message.senderId, ContentType.valueOf(message.kind), message.text,
         message.timestamp, message.incoming, status, deliveredCount, targetCount, message.progress,
-        message.fileName, message.fileSize, message.fileId, message.error)
+        message.fileName, message.fileSize, message.fileId, message.error, message.mimeType)
 }

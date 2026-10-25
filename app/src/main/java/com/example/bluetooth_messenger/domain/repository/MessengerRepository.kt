@@ -1,6 +1,7 @@
 package com.example.bluetooth_messenger.domain.repository
 
 import com.example.bluetooth_messenger.domain.model.*
+import java.io.OutputStream
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -8,11 +9,17 @@ interface MessengerRepository {
     val contacts: Flow<List<Contact>>
     val conversations: Flow<List<Conversation>>
     val pairings: StateFlow<List<PairingPrompt>>
+    val ownId: StateFlow<String?>
+    val transferBusy: StateFlow<Boolean>
     val ownQr: StateFlow<String?>
     val publicMessages: Flow<List<PublicMessage>>
     val errors: StateFlow<String?>
     fun messages(conversation: String): Flow<List<ChatMessage>>
+    fun recipients(message: String): Flow<List<RecipientDelivery>>
     fun groupMembers(conversation: String): Flow<List<GroupMember>>
+    suspend fun contactDetails(peer: String): ContactDetails
+    suspend fun photoBytes(fileId: String): ByteArray
+    suspend fun exportFile(fileId: String, open: () -> OutputStream)
     suspend fun addFromQr(value: String, name: String)
     suspend fun confirmPairing(peer: String, name: String)
     suspend fun rejectPairing(peer: String)
