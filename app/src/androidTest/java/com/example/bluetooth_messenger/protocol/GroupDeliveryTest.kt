@@ -128,4 +128,59 @@ class GroupDeliveryTest {
         assertThrows(IllegalArgumentException::class.java) { runBlocking { c.groups.receiveRoster(packet) } }
         assertEquals(1, c.database.use { it.contacts().conversation(group) }!!.epoch)
     }
+
+    @Test fun replayedLeaveCannotRemoveMemberWhoRejoinedInNewEpoch() = runBlocking<Unit> {
+        b.groups.leave(group)
+        val leave = b.database.use { db ->
+            db.messages().pending(a.id()).map { PacketCodec().decode(it.packet) }
+                .single { it.kind == PacketKind.GroupLeave }
+        }
+        assertEquals(1, leave.epoch)
+        a.groups.receiveLeave(leave)
+        assertEquals(2, a.database.use { it.contacts().conversation(group) }!!.epoch)
+
+        a.groups.add(group, b.id())
+        a.flush(b)
+        assertEquals(3, a.database.use { it.contacts().conversation(group) }!!.epoch)
+        assertTrue(b.database.use { it.contacts().conversation(group) }!!.active)
+        assertTrue(a.database.use { it.protocol().members(group, 3) }.any { it.memberId == b.id() })
+
+        a.groups.receiveLeave(leave)
+
+        val current = a.database.use { it.contacts().conversation(group) }!!
+        assertEquals(3, current.epoch)
+        assertTrue(current.active)
+        assertTrue(a.database.use { it.protocol().members(group, current.epoch) }.any { it.memberId == b.id() })
+    }
+
+    @Test fun replayedRemovalCannotCancelNewEpochMessagesAfterRejoining() = runBlocking<Unit> {
+        a.groups.remove(group, c.id())
+        val removed = a.database.use { db ->
+            db.messages().pending(c.id()).map { PacketCodec().decode(it.packet) }
+                .single { it.kind == PacketKind.GroupLeave }
+        }
+        c.groups.receiveLeave(removed)
+        assertEquals(2, c.database.use { it.contacts().conversation(group) }!!.epoch)
+        assertFalse(c.database.use { it.contacts().conversation(group) }!!.active)
+
+        a.groups.add(group, c.id())
+        a.flush(c)
+        assertEquals(3, c.database.use { it.contacts().conversation(group) }!!.epoch)
+        assertTrue(c.database.use { it.contacts().conversation(group) }!!.active)
+        c.messages.send(group, text("queued after rejoining"))
+        val queued = c.database.use { db ->
+            db.messages().pending(a.id()).single { PacketCodec().decode(it.packet).kind == PacketKind.GroupMessage }
+        }
+        assertEquals(3, PacketCodec().decode(queued.packet).epoch)
+        assertTrue(queued.packet.isNotEmpty())
+
+        c.groups.receiveLeave(removed)
+
+        val current = c.database.use { it.contacts().conversation(group) }!!
+        assertEquals(3, current.epoch)
+        assertTrue(current.active)
+        val afterReplay = c.database.use { it.messages().delivery(queued.packetId, a.id()) }!!
+        assertEquals("Pending", afterReplay.status)
+        assertArrayEquals(queued.packet, afterReplay.packet)
+    }
 }

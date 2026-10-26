@@ -52,6 +52,10 @@ class GroupMembership @Inject constructor(
     }
 
     suspend fun remove(group: String, member: String) = mutation.withLock {
+        removeMember(group, member)
+    }
+
+    private suspend fun removeMember(group: String, member: String) {
         val chat = owned(group)
         require(member != chat.ownerId)
         val members = database.use { it.protocol().members(group, chat.epoch) }
@@ -145,7 +149,7 @@ class GroupMembership @Inject constructor(
         return secrets.open(stored.wrappedKey, keyContext(group, epoch))
     }
 
-    suspend fun leave(group: String) {
+    suspend fun leave(group: String) = mutation.withLock {
         val chat = database.use { checkNotNull(it.contacts().conversation(group)) }
         require(chat.type == "Group" && chat.active)
         val own = identity.identity().userId
@@ -158,29 +162,38 @@ class GroupMembership @Inject constructor(
         database.use { db -> db.withTransaction { db.protocol().leaveLocally(group); db.messages().cancelExcluded(group, emptyList()) } }
     }
 
-    suspend fun receiveLeave(packet: WirePacket) {
+    suspend fun receiveLeave(packet: WirePacket): Boolean = mutation.withLock {
         val chat = database.use { checkNotNull(it.contacts().conversation(packet.conversation)) }
         require(chat.type == "Group")
         val sender = if (packet.sender == chat.ownerId) directory.contact(packet.sender)
             else directory.conversation(packet.sender, chat.id, packet.epoch)
         val body = json(secure.open(packet, sender))
+        var changed = false
         when (body.getString("action")) {
             "leave" -> {
                 require(chat.ownerId == identity.identity().userId && packet.sender != chat.ownerId)
-                if (chat.active && database.use { it.protocol().members(chat.id, chat.epoch) }.any { it.memberId == packet.sender }) remove(chat.id, packet.sender)
+                val member = database.use { it.protocol().members(chat.id, chat.epoch) }.firstOrNull { it.memberId == packet.sender }
+                if (chat.active && member != null && packet.epoch >= member.joinedEpoch) {
+                    removeMember(chat.id, packet.sender)
+                    changed = true
+                }
             }
             "removed", "closed" -> {
                 require(packet.sender == chat.ownerId)
                 val epoch = body.getInt("epoch")
                 require(epoch > 0)
-                database.use { db -> db.withTransaction {
-                    if (epoch >= chat.epoch) db.protocol().updateGroup(chat.id, epoch, false)
-                    db.messages().cancelExcluded(chat.id, emptyList())
-                } }
+                if (epoch >= chat.epoch) {
+                    database.use { db -> db.withTransaction {
+                        db.protocol().updateGroup(chat.id, epoch, false)
+                        db.messages().cancelExcluded(chat.id, emptyList())
+                    } }
+                    changed = true
+                }
             }
             else -> error("Некорректное изменение состава")
         }
         direct.acknowledge(packet, sender)
+        changed
     }
 
     private fun keyContext(group: String, epoch: Int) = "offgrid-group-key:$group:$epoch"
