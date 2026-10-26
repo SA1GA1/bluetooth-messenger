@@ -21,6 +21,9 @@ import dagger.hilt.components.SingletonComponent
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
+    @Binds abstract fun fileLink(implementation: com.example.bluetooth_messenger.data.transport.AndroidWifiDirect): com.example.bluetooth_messenger.domain.transport.FileLink
+    @Binds abstract fun messenger(implementation: com.example.bluetooth_messenger.data.repository.DefaultMessengerRepository): com.example.bluetooth_messenger.domain.repository.MessengerRepository
+    @Binds abstract fun pages(implementation: com.example.bluetooth_messenger.data.repository.RoomMessagePages): com.example.bluetooth_messenger.core.paging.MessagePages
     @Binds abstract fun clock(implementation: AndroidClock): AppClock
     @Binds abstract fun identityCrypto(implementation: KeystoreIdentityRepository): IdentityCrypto
     @Binds abstract fun session(implementation: AndroidSessionController): SessionController
