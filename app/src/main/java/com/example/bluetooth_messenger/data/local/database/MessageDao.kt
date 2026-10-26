@@ -18,6 +18,8 @@ private const val MESSAGE_SELECTION = "SELECT m.*, " +
 
 @Dao
 abstract class MessageDao {
+    @Query("UPDATE pending_queue SET status='Error' WHERE status='Sent'")
+    abstract suspend fun interruptSent()
     @Query(MESSAGE_SELECTION + " LIMIT 200")
     abstract fun observe(conversation: String): Flow<List<MessageRow>>
 
@@ -104,10 +106,10 @@ abstract class MessageDao {
     @Query("DELETE FROM pending_queue WHERE wireKind = 'Read' AND status NOT IN ('Delivered','Read')")
     abstract suspend fun cancelReadReceipts()
 
-    @Query("SELECT id FROM messages WHERE conversationId = :conversation AND incoming = 1 AND unread = 1")
+    @Query("SELECT id FROM messages WHERE conversationId = :conversation AND incoming = 1 AND unread = 1 AND (fileId IS NULL OR status='Delivered')")
     abstract suspend fun unreadIds(conversation: String): List<String>
 
-    @Query("UPDATE messages SET unread = 0 WHERE conversationId = :conversation")
+    @Query("UPDATE messages SET unread = 0 WHERE conversationId = :conversation AND (fileId IS NULL OR status='Delivered')")
     abstract suspend fun readConversation(conversation: String)
 
     @Query("UPDATE messages SET status = 'Read' WHERE id = :message AND incoming = 0")
@@ -115,6 +117,9 @@ abstract class MessageDao {
 
     @Query("DELETE FROM pending_queue WHERE messageId IN (SELECT id FROM messages WHERE conversationId = :conversation)")
     abstract suspend fun clearQueue(conversation: String)
+
+    @Query("DELETE FROM pending_queue WHERE controlScope=:conversation AND wireKind='Read'")
+    abstract suspend fun clearReadReceipts(conversation: String)
 
     @Query("DELETE FROM messages WHERE conversationId = :conversation")
     abstract suspend fun deleteHistory(conversation: String)
@@ -125,6 +130,7 @@ abstract class MessageDao {
     @Transaction
     open suspend fun clearHistory(conversation: String) {
         clearQueue(conversation)
+        clearReadReceipts(conversation)
         deleteHistory(conversation)
         resetConversationTime(conversation)
     }

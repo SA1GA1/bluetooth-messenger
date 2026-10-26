@@ -5,6 +5,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.example.bluetooth_messenger.data.local.database.*
 import com.example.bluetooth_messenger.data.protocol.*
 import com.example.bluetooth_messenger.domain.model.directConversationId
+import com.example.bluetooth_messenger.domain.model.newId
 import com.example.bluetooth_messenger.domain.transport.*
 import com.example.bluetooth_messenger.support.*
 import kotlinx.coroutines.flow.*
@@ -112,5 +113,31 @@ class DirectDeliveryTest {
         a.protocol.receipt(receipt)
         assertEquals("Read", a.database.use { it.messages().delivery(second.id, b.id()) }!!.status)
         assertFalse(b.database.use { it.messages().find(second.id) }!!.unread)
+    }
+
+    @Test fun clearHistoryRemovesQueuedReadReceiptsAndPreservesOtherGroupControls() = runBlocking<Unit> {
+        b.settings.setReadReceipts(true)
+        val incoming = send("read before local history deletion")
+        b.protocol.receive(incoming)
+        b.protocol.markRead(conversation)
+        val read = b.database.use { db ->
+            db.messages().pending(a.id()).single { PacketCodec().decode(it.packet).kind == PacketKind.Read }
+        }
+        assertEquals(conversation, PacketCodec().decode(read.packet).conversation)
+        val group = newId()
+        val ready = SecurePackets(b.identity, b.clock).direct(PacketKind.GroupReady, a.identity.identity(), group,
+            JSONObject().put("ref", newId()).toString().toByteArray(), epoch = 1)
+        b.queue.add(ready)
+        val beforeGroup = b.database.use { it.messages().delivery(ready.id, a.id()) }!!
+        assertTrue(beforeGroup.packet.isNotEmpty())
+
+        b.database.use { it.messages().clearHistory(conversation) }
+
+        assertNull(b.database.use { it.messages().find(incoming.id) })
+        assertNull("Queued Read controls for deleted history must be removed",
+            b.database.use { it.messages().delivery(read.packetId, a.id()) })
+        val afterGroup = b.database.use { it.messages().delivery(ready.id, a.id()) }!!
+        assertEquals("Pending", afterGroup.status)
+        assertArrayEquals(beforeGroup.packet, afterGroup.packet)
     }
 }
