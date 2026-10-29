@@ -1,47 +1,39 @@
 package com.example.bluetooth_messenger
 
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import com.example.bluetooth_messenger.ui.global.AppViewModel
+import com.example.bluetooth_messenger.ui.messenger.NativeBiometric
+import com.example.bluetooth_messenger.ui.messenger.OffGridApp
 import com.example.bluetooth_messenger.ui.theme.BluetoothmessengerTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val vm: AppViewModel by viewModels()
+    private lateinit var biometric: NativeBiometric
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        biometric = NativeBiometric(this,vm,lifecycleScope)
         setContent {
             BluetoothmessengerTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                OffGridApp(vm,onClose = { vm.session.closeTask(); finishAndRemoveTask() },onBiometric = biometric::authenticate)
             }
         }
     }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    BluetoothmessengerTheme {
-        Greeting("Android")
+    override fun onStart() { super.onStart(); vm.session.foreground() }
+    override fun onStop() {
+        biometric.cancel()
+        if(!isChangingConfigurations) vm.session.background()
+        super.onStop()
     }
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean { vm.session.interacted(); return super.dispatchTouchEvent(event) }
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean { vm.session.interacted(); return super.dispatchKeyEvent(event) }
 }
