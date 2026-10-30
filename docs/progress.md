@@ -30,3 +30,36 @@ Vault/session GREEN: 4/4 emulator tests; storage 5/5; unit suite 41/41. Lint ide
 
 Session completion epochs: RED delayed-auth test → GREEN 42/42 unit tests.
 Checkpoint: storage/vault instrumentation 9/9 PASS; lint 0 errors (15 warnings, mostly dependency update recommendations); native BLE service waits for service registration and rejects callbacks from stopped generations.
+
+## User-requested pause checkpoint (2026-10-16)
+
+Implemented and integrated QR/SAS pairing, direct messages, group membership/key rotation,
+anonymous public messages, encrypted attachment storage/socket delivery, and Compose screens.
+Native Wi-Fi Direct negotiates addresses/services; physical interoperability remains untested.
+
+Earlier focused emulator checks PASS: session controller 5/5, pairing 3/3, public broadcast 3/3,
+PIN UI 2/2, storage 5/5, vault 4/4. These were not all repeated in the final selected run.
+
+Final checkpoint command PASS: testDebugUnitTest + connectedDebugAndroidTest selecting
+GroupDeliveryTest, DirectDeliveryTest, FileDeliveryTest and MessengerScreenTest.
+- Unit: 52 tests, 0 failures/errors/skips.
+- Selected instrumentation: 27 tests, 0 failures/errors/skips.
+- Includes actual local TCP encrypted-file round trip, malformed size rejection, interruption,
+  duplicate Ack/tombstones, group rejoin replay regression, deferred read receipts, and photo draw.
+- Local TCP uses fake FileLink adapters and is not native Wi-Fi Direct hardware acceptance.
+
+Review fixes: stale leave cannot evict a rejoined membership; stale removal cannot erase a new
+queue; membership changes are serialized; history clearing cancels scoped Read controls;
+incomplete files stay unread; file plaintext length must agree with authenticated ciphertext;
+transfer cleanup rejects replacement reservations until finished; photo disposal captures the
+actual bitmap; group details hide unsupported deletion and inactive membership controls.
+
+Latest integrated Lint was stopped after an observed PSI walking loop while sources changed;
+no final integrated Lint/release pass is claimed. Ruling: freeze source edits for the entire Gradle
+invocation, including analysis. Full validation and remaining MVP details are in docs/resume.md.
+
+Git ruling requested by user: distribute implementation author/committer dates from 2026-10-17
+over consecutive days with 3–7 commits/day and distinct non-round times. Rewrote the implementation
+branch with force-with-lease after explicit authorization; main/baseline and user edits preserved.
+README.md is ignored/untracked but retained locally. Paused by explicit user request; resume from
+docs/resume.md without repeating completed implementation or claiming MVP acceptance complete.

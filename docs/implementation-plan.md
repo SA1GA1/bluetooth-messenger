@@ -9,10 +9,10 @@ Preserve existing user changes, no blanket staging, no force push.
 
 ## Tasks
 - [x] 1. Contract, dependency alignment, working debug build/tests/lint.
-- [ ] 2. Hilt application, domain contracts, errors, fake transport.
+- [x] 2. Hilt application, domain contracts, errors, fake transport.
 - [ ] 3. Runtime permissions, BLE discovery, GATT framing, Wi-Fi Direct transfer.
 - [ ] 4. Identity keys, encrypted database secret, PIN/biometric/session lifecycle.
-- [ ] 5. Versioned QR, scanner, authenticated mutual pairing, contacts.
+- [x] 5. Versioned QR, scanner, authenticated mutual pairing, contacts.
 - [ ] 6. Encrypted direct messages, durable queue/Ack/deduplication, receipts.
 - [ ] 7. Dark theme/navigation, chats/nearby/detail/message UI.
 - [ ] 8. Encrypted attachments, progress/retry, photos/location.
