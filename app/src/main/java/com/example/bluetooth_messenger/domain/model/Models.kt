@@ -22,6 +22,7 @@ fun newId(): String = UUID.randomUUID().toString()
 
 fun validateText(text: String, public: Boolean = false) {
     require(text.isNotBlank()) { "Сообщение пустое" }
+    require(text.none { it.code < 0x20 && it !in "\t\n\r" }) { "Сообщение содержит недопустимые управляющие символы" }
     val limit = if (public) Limits.PUBLIC_BYTES else Limits.TEXT_BYTES
     require(text.toByteArray(Charsets.UTF_8).size <= limit) { "Сообщение слишком длинное" }
 }
