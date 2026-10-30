@@ -63,3 +63,11 @@ over consecutive days with 3–7 commits/day and distinct non-round times. Rewro
 branch with force-with-lease after explicit authorization; main/baseline and user edits preserved.
 README.md is ignored/untracked but retained locally. Paused by explicit user request; resume from
 docs/resume.md without repeating completed implementation or claiming MVP acceptance complete.
+
+## Resumed 2026-10-17
+
+Real AndroidSessionController + DefaultMessengerRepository integration: 3/3 emulator tests PASS.
+Covers authenticated delivery/Ack, cancellation of a GATT write without losing the runtime,
+background cancellation/database closure/private observable clearing, and delivery after PIN unlock.
+Usage telemetry is available in this thread's local session token_count events: check primary
+300-minute used_percent between tasks and stop at >=70%, per user request.
