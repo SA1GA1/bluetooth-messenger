@@ -1,6 +1,6 @@
 # Resume checkpoint
 
-Paused at the user's request on 2026-10-16. Continue the approved MVP, without post-MVP technologies.
+Resumed on 2026-10-17. Continue the approved MVP, without post-MVP technologies.
 Branch: `feature/offgrid-mvp`; original baseline: `861c44d`.
 
 ## Current implementation
@@ -15,14 +15,13 @@ Read `docs/progress.md` for verification. This is a development checkpoint, not 
 
 ## Next work, in order
 
-1. Review and test integrated `DefaultMessengerRepository` runtime across unlock/background/reconnect.
-   Existing protocol tests construct components directly; screen tests inject fake repositories.
-   Test the actual facade and cancellation boundaries, especially simultaneous file cleanup/start.
-2. Finish remaining MVP details: source-side file progress; local group notices for deferred/delivered
-   messages; safe cleanup of encrypted orphan/pending files after process death. Review queue Ack
-   timeout against wall-clock changes; live timeouts should use elapsed time.
-3. Handle text containing many JSON-escaped control characters: the 16 KiB text limit must not
-   overflow the 64 KiB wire packet limit. Preserve ordinary newlines/tabs and document validation.
+1. Finish local group notices for deferred/delivered messages and safe cleanup of encrypted
+   orphan/pending files after process death. Serialize startup cleanup against new imports.
+2. Extend file cancellation tests around simultaneous cleanup/start. Real repository lifecycle
+   now has three passing integration tests; screen tests still inject fake repositories.
+3. Runtime, source-side file progress, elapsed-time Ack expiry and C0 text validation were checked
+   on 2026-10-17: 54 unit tests and 19 selected instrumentation tests PASS. Source progress uses
+   a conflated reporting channel; FileAck persists 100%. Tabs/newlines/carriage returns are allowed.
 4. Remove unused legacy initialization/UI models if no longer referenced. Improve formatting in
    compact UI/protocol methods without introducing additional architecture layers.
 5. Repeat full debug build, unit tests, Lint and instrumentation; build release; verify APK native
@@ -68,3 +67,15 @@ an emulator; never add a silent software fallback to make onboarding pass.
 - README.md is now ignored/untracked at the user's request and remains on disk as the specification.
 - Preserve the user's `.idea/deviceManager.xml` staged deletion/untracked replacement and
   staged/working differences in `gradle/wrapper/gradle-wrapper.properties`. Never blanket-stage.
+
+## Usage and context request (2026-10-17)
+
+User requested stopping when the five-hour quota has 30% remaining. Local session JSONL events
+`event_msg` / `token_count` expose `rate_limits.primary` (`window_minutes=300`, `used_percent`).
+Read only this thread via CODEX_THREAD_ID. `/private/tmp/offgrid-usage.py` prints a bounded status;
+check between tasks and stop at used_percent >=70. Latest check: 9% used, 91% remaining.
+
+User also requested compaction above 50% context. Latest observed input/window ratio: 53.3%.
+No callable compaction tool was exposed; do not claim manual summaries actually freed context.
+Current work was finished to a verified checkpoint; user can invoke `/compact` before the next
+implementation stage. This file and docs/progress.md preserve the continuation state.

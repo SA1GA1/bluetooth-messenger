@@ -71,3 +71,12 @@ Covers authenticated delivery/Ack, cancellation of a GATT write without losing t
 background cancellation/database closure/private observable clearing, and delivery after PIN unlock.
 Usage telemetry is available in this thread's local session token_count events: check primary
 300-minute used_percent between tasks and stop at >=70%, per user request.
+
+RED→GREEN: non-printing C0 text rejection (ordinary tabs/newlines retained); source-side file
+progress (0→100 after authenticated transfer); elapsed-time delivery expiry despite forward/backward
+wall-clock changes. Final command testDebugUnitTest + selected DirectDeliveryTest/FileDeliveryTest/
+MessengerRuntimeTest PASS: 54 unit tests, 19 instrumentation tests, no failures/errors/skips.
+Ruling: wire text rejects C0 controls except tab, LF and CR, preventing their 6x JSON escaping from
+overflowing the bounded packet; normal user-visible text and the 16 KiB UTF-8 limit are preserved.
+Latest quota check: 91% remaining. Context exceeded the user's 50% compaction threshold; no
+compaction tool is exposed. Recorded the checkpoint for user-triggered /compact before new work.
