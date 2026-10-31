@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "6b53a0421c48481d24830f2ad679a1a7",
+    "identityHash": "2c8f11ae58f250c7134e46c688013eb9",
     "entities": [
       {
         "tableName": "contacts",
@@ -253,7 +253,7 @@
       },
       {
         "tableName": "pending_queue",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packetId` TEXT NOT NULL, `targetId` TEXT NOT NULL, `messageId` TEXT, `packet` BLOB NOT NULL, `status` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `attempts` INTEGER NOT NULL, `controlScope` TEXT, `wireKind` TEXT NOT NULL, PRIMARY KEY(`packetId`, `targetId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`packetId` TEXT NOT NULL, `targetId` TEXT NOT NULL, `messageId` TEXT, `packet` BLOB NOT NULL, `status` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `attempts` INTEGER NOT NULL, `controlScope` TEXT, `wireKind` TEXT NOT NULL, `deliveryNotified` INTEGER NOT NULL, PRIMARY KEY(`packetId`, `targetId`))",
         "fields": [
           {
             "fieldPath": "packetId",
@@ -305,6 +305,12 @@
             "fieldPath": "wireKind",
             "columnName": "wireKind",
             "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deliveryNotified",
+            "columnName": "deliveryNotified",
+            "affinity": "INTEGER",
             "notNull": true
           }
         ],
@@ -710,7 +716,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6b53a0421c48481d24830f2ad679a1a7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2c8f11ae58f250c7134e46c688013eb9')"
     ]
   }
 }

@@ -83,6 +83,33 @@ class GroupDeliveryTest {
     }
     private fun text(value: String) = JSONObject().put("kind", "Text").put("text", value)
 
+    @Test fun deliveryNoticesBatchRecipientsAndRemainDeduplicatedAfterReopening() = runBlocking<Unit> {
+        val radio = TestRadio()
+        radio.peers.value = listOf(com.example.bluetooth_messenger.domain.model.DiscoveredPeer(b.id(), "test", 0))
+        val notices = GroupDeliveryNotices(a.database, a.identity, radio, a.clock)
+        c.online = false
+        a.messages.send(group, text("one"))
+        a.messages.send(group, text("two"))
+        notices.deferred(group)
+        a.flush(b, c)
+        notices.delivered()
+        fun systems(rows: List<MessageRow>) = rows.filter { it.message.kind == "System" }
+        val first = systems(a.database.use { it.messages().observe(group).first() })
+        assertEquals(2, first.size)
+        assertTrue(first.any { it.message.text == "Контакт вне зоны. Доставка отложена." })
+        assertTrue(first.any { it.message.text == "Контакт получил 2 сообщения." })
+        notices.delivered()
+        a.database.close(); a.vault.lock(); a.open()
+        GroupDeliveryNotices(a.database, a.identity, radio, a.clock).delivered()
+        assertEquals(2, systems(a.database.use { it.messages().observe(group).first() }).size)
+        c.online = true
+        a.flush(c)
+        notices.delivered()
+        assertEquals(3, systems(a.database.use { it.messages().observe(group).first() }).size)
+        assertTrue(systems(b.database.use { it.messages().observe(group).first() }).isEmpty())
+        assertTrue(systems(c.database.use { it.messages().observe(group).first() }).isEmpty())
+    }
+
     @Test fun rosterAuthorizesGroupOnlyWithoutCreatingPersonalContacts() = runBlocking<Unit> {
         assertNull(b.database.use { it.contacts().find(c.id()) })
         b.messages.send(group, text("hello group"))

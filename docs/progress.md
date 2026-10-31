@@ -87,3 +87,10 @@ RED (orphan survives) → GREEN real MessengerRuntimeTest 4/4 and full unit suit
 New commands wait for initialization of the exact reopened database; transport subscribes before
 runtime readiness. Completed attachment IDs retain ciphertext; uncommitted/orphan and pending
 ciphertext are removed before imports or incoming offers can start.
+
+Group delivery notices: service regression RED (0 notices instead of 2) → GREEN GroupDeliveryTest
+7/7. Local notices batch committed Ack/Read deliveries per recipient; notification marking and
+insertion share one Room transaction, so opening the database again cannot duplicate them.
+Ruling: store the notification marker in the unreleased v1 outbox schema, consistent with previous
+unreleased schema edits; already installed development builds need a local reset after this change.
+No migration from a published version is being removed; cost is resetting test/development data.

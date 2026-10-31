@@ -62,6 +62,7 @@ data class OutboxEntity(
     val attempts: Int = 0,
     val controlScope: String? = null,
     val wireKind: String = "Direct",
+    val deliveryNotified: Boolean = false,
 )
 
 @Entity(tableName = "pairings")

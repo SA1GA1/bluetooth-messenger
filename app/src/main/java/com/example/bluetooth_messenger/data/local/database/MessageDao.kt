@@ -18,6 +18,12 @@ private const val MESSAGE_SELECTION = "SELECT m.*, " +
 
 @Dao
 abstract class MessageDao {
+    @Query("SELECT d.* FROM pending_queue d JOIN messages m ON m.id=d.messageId JOIN conversations c ON c.id=m.conversationId WHERE c.type='Group' AND d.status IN ('Delivered','Read') AND d.deliveryNotified=0 LIMIT 500")
+    abstract suspend fun unnotifiedGroupDeliveries(): List<OutboxEntity>
+
+    @Query("UPDATE pending_queue SET deliveryNotified=1 WHERE packetId IN (:packets) AND targetId=:target")
+    abstract suspend fun markDeliveryNotified(packets: List<String>, target: String)
+
     @Query("UPDATE messages SET progress=MAX(progress,:progress) WHERE id=:message")
     abstract suspend fun sendingProgress(message: String, progress: Int)
     @Query("UPDATE pending_queue SET status='Error' WHERE status='Sent'")
