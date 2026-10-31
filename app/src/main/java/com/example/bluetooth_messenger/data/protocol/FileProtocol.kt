@@ -11,6 +11,7 @@ import com.example.bluetooth_messenger.domain.model.*
 import com.example.bluetooth_messenger.domain.repository.IdentityCrypto
 import com.example.bluetooth_messenger.domain.time.AppClock
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -106,6 +107,10 @@ class FileProtocol @Inject constructor(
                 val server = ServerSocketChannel.open()
                 try { server.bind(InetSocketAddress(address, PORT)) } catch (failure: Throwable) { server.close(); throw failure }
                 job = tasks.launch {
+                    val progress = Channel<Int>(Channel.CONFLATED)
+                    val reporting = launch {
+                        for (percent in progress) database.use { it.messages().sendingProgress(packet.id, percent) }
+                    }
                     try {
                         withTimeout(120_000) {
                             runInterruptible(Dispatchers.IO) {
@@ -118,7 +123,18 @@ class FileProtocol @Inject constructor(
                                         require(requested == file.id && MessageDigest.isEqual(token, file.token))
                                         val output = DataOutputStream(Channels.newOutputStream(client))
                                         output.writeLong(file.encryptedSize)
-                                        store.input(file.id).use { it.copyTo(output, 65536) }
+                                        store.input(file.id).use { source ->
+                                            val buffer = ByteArray(65536)
+                                            var transferred = 0L
+                                            while (true) {
+                                                val count = source.read(buffer)
+                                                if (count < 0) break
+                                                output.write(buffer, 0, count)
+                                                transferred += count
+                                                progress.trySend((transferred * 100 / file.encryptedSize).toInt())
+                                            }
+                                            check(transferred == file.encryptedSize)
+                                        }
                                         output.flush()
                                     }
                                 }
@@ -127,7 +143,11 @@ class FileProtocol @Inject constructor(
                     } catch (failure: CancellationException) { throw failure }
                     catch (_: Exception) {
                         database.use { it.messages().deliveryError(packet.id, target) }
-                    } finally { server.close() }
+                    } finally {
+                        server.close()
+                        progress.close()
+                        withContext(NonCancellable) { reporting.cancelAndJoin() }
+                    }
                 }
                 true
             } catch (failure: Throwable) {
@@ -255,7 +275,10 @@ class FileProtocol @Inject constructor(
             require(original.kind == PacketKind.FileOffer && original.conversation == packet.conversation && original.epoch == packet.epoch)
         }
         if (packet.kind == PacketKind.FileAck) {
-            database.use { it.messages().acknowledge(ref, sender.userId) }
+            database.use {
+                it.messages().acknowledge(ref, sender.userId)
+                it.messages().sendingProgress(ref, 100)
+            }
             release(ref to sender.userId)
         } else when (body.getString("action")) {
             "busy" -> { database.use { it.messages().deliveryError(ref, sender.userId) }; release(ref to sender.userId) }

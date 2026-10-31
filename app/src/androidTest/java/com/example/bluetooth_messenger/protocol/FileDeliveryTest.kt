@@ -312,6 +312,7 @@ class FileDeliveryTest {
         val received = receiverTerminal(packet)
         assertEquals("Delivered", received.status)
         assertEquals(100, received.progress)
+        assertEquals(100, a.database.use { it.messages().find(packet.id) }!!.progress)
         val file = b.database.use { it.attachments().forMessage(packet.id) }!!
         assertTrue(file.complete)
         assertTrue(b.store.exists(file.id))

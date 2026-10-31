@@ -18,6 +18,8 @@ private const val MESSAGE_SELECTION = "SELECT m.*, " +
 
 @Dao
 abstract class MessageDao {
+    @Query("UPDATE messages SET progress=MAX(progress,:progress) WHERE id=:message")
+    abstract suspend fun sendingProgress(message: String, progress: Int)
     @Query("UPDATE pending_queue SET status='Error' WHERE status='Sent'")
     abstract suspend fun interruptSent()
     @Query(MESSAGE_SELECTION + " LIMIT 200")
