@@ -38,7 +38,7 @@ class PacketQueue @Inject constructor(private val database: DatabaseSession, pri
                     try {
                         if (!canSend(codec.decode(delivery.packet), peer)) continue
                         transport.send(peer, delivery.packet)
-                        database.use { it.messages().sent(delivery.packetId, peer, clock.wallMillis()) }
+                        database.use { it.messages().sent(delivery.packetId, peer, clock.elapsedMillis()) }
                     } catch (failure: CancellationException) { throw failure }
                     catch (_: PeerUnavailableException) { break }
                     catch (_: Exception) {

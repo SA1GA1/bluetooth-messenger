@@ -10,8 +10,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 class TestClock : AppClock {
     @Volatile var elapsed = 0L
+    @Volatile var wallShift = 0L
     override fun elapsedMillis() = elapsed
-    override fun wallMillis() = 1_000_000L + elapsed
+    override fun wallMillis() = 1_000_000L + elapsed + wallShift
 }
 class TestSettings(initial: AppSettings = AppSettings()) : SettingsRepository {
     override val settings = MutableStateFlow(initial)

@@ -103,7 +103,7 @@ class DefaultMessengerRepository @Inject constructor(
                 try {
                     pairing.maintenance()
                     files.maintenance()
-                    database.use { db -> db.messages().expire(clock.wallMillis() - 120_000); db.protocol().expirePublic(clock.wallMillis()) }
+                    database.use { db -> db.messages().expire(clock.elapsedMillis() - 120_000); db.protocol().expirePublic(clock.wallMillis()) }
                     heartbeat.value++
                     flush()
                 } catch (failure: CancellationException) { throw failure }

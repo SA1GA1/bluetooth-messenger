@@ -66,6 +66,19 @@ class DirectDeliveryTest {
         assertTrue(a.database.use { it.messages().pending(b.id()) }.isEmpty())
     }
 
+    @Test fun deliveryTimeoutIgnoresWallClockCorrections() = runBlocking<Unit> {
+        val packet = send()
+        a.queue.flush(listOf(b.id()))
+        a.clock.elapsed = 119_999
+        a.clock.wallShift = 365L * 24 * 60 * 60 * 1000
+        a.database.use { it.messages().expire(a.clock.elapsedMillis() - 120_000) }
+        assertEquals("Sent", a.database.use { it.messages().delivery(packet.id, b.id()) }!!.status)
+        a.clock.elapsed = 120_001
+        a.clock.wallShift = -365L * 24 * 60 * 60 * 1000
+        a.database.use { it.messages().expire(a.clock.elapsedMillis() - 120_000) }
+        assertEquals("Error", a.database.use { it.messages().delivery(packet.id, b.id()) }!!.status)
+    }
+
     @Test fun earlyAckCannotRegressDeliveredBackToSent() = runBlocking<Unit> {
         val packet = send()
         a.link.onSend = { b.protocol.receive(PacketCodec().decode(it)) }
