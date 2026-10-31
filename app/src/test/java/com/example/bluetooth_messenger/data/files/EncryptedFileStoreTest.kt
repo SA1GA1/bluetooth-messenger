@@ -115,4 +115,21 @@ class EncryptedFileStoreTest {
         try { block() } catch (exception: Exception) { failure = exception }
         assertNotNull("Expected malformed attachment to be rejected", failure)
     }
+
+    @Test fun recoveryKeepsCommittedFilesAndRemovesAbandonedCiphertext() = runBlocking {
+        val directory = temporary.newFolder()
+        val store = EncryptedFileStore(directory)
+        val retained = id()
+        val orphan = id()
+        val saved = store.`import`(retained, source(byteArrayOf(1, 2)), 2)
+        store.`import`(orphan, source(byteArrayOf(3)), 1)
+        val pending = File(directory, ".pending").apply { mkdirs() }
+        File(pending, id()).writeBytes(byteArrayOf(4))
+        store.recover(setOf(retained))
+        assertArrayEquals(byteArrayOf(1, 2), store.bytes(retained, saved.key))
+        assertFalse(store.exists(orphan))
+        assertTrue(pending.listFiles().orEmpty().isEmpty())
+        store.recover(setOf(retained))
+        assertTrue(store.exists(retained))
+    }
 }

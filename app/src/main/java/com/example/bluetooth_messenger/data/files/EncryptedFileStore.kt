@@ -143,6 +143,20 @@ class EncryptedFileStore internal constructor(private val directory: File) {
     fun delete(fileId: String) { synchronized(publicationLock) { path(fileId).delete() } }
     fun exists(fileId: String): Boolean = path(fileId).isFile
 
+    suspend fun recover(retainedIds: Set<String>) = withContext(Dispatchers.IO) {
+        synchronized(publicationLock) {
+            val pending = File(directory, ".pending")
+            for (file in pending.listFiles().orEmpty()) {
+                check(file.isFile && file.delete()) { "Cannot remove interrupted attachment" }
+            }
+            for (file in directory.listFiles().orEmpty()) {
+                if (file.isFile && file.name !in retainedIds) {
+                    check(file.delete()) { "Cannot remove orphan attachment" }
+                }
+            }
+        }
+    }
+
     private fun path(id: String): File {
         require(UUID.fromString(id).toString() == id) { "Invalid attachment ID" }
         return File(directory, id)
