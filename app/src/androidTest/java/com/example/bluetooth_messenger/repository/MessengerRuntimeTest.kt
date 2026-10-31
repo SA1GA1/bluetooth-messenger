@@ -161,4 +161,31 @@ class MessengerRuntimeTest {
         withTimeout(8000) { a.repository.messages(chat).first { it.any { row -> row.status == DeliveryStatus.Delivered } } }
         assertEquals(1, b.repository.messages(chat).first { it.isNotEmpty() }.size)
     }
+
+    @Test fun unlockRecoversOrphansBeforeAcceptingNewAttachments() = runBlocking<Unit> {
+        a.radio.peers.value = emptyList()
+        val contents = byteArrayOf(7, 8, 9)
+        fun source() = AttachmentSource("test.bin", "application/octet-stream", 3) { contents.inputStream() }
+        a.repository.sendAttachment(chat, source(), false)
+        val retained = a.database.use { it.attachments().forConversation(chat) }.single().id
+        withContext(Dispatchers.Main) { a.controller.background() }
+        withTimeout(5000) { a.database.database.first { it == null } }
+        val folder = File(a.context.filesDir, "attachments")
+        val orphan = File(folder, UUID.randomUUID().toString()).apply { writeBytes(byteArrayOf(1)) }
+        val pending = File(folder, ".pending").apply { mkdirs() }
+        File(pending, UUID.randomUUID().toString()).writeBytes(byteArrayOf(2))
+        withContext(Dispatchers.Main) { a.controller.foreground(); a.controller.unlock("123456".toCharArray()) }
+        a.repository.sendAttachment(chat, source(), false)
+        a.awaitRuntime()
+        assertFalse(orphan.exists())
+        assertTrue(pending.listFiles().orEmpty().isEmpty())
+        assertTrue(File(folder, retained).isFile)
+        val attachments = a.database.use { it.attachments().forConversation(chat) }
+        assertEquals(2, attachments.size)
+        for (attachment in attachments) {
+            val exported = java.io.ByteArrayOutputStream()
+            a.repository.exportFile(attachment.id) { exported }
+            assertArrayEquals(contents, exported.toByteArray())
+        }
+    }
 }

@@ -80,3 +80,10 @@ Ruling: wire text rejects C0 controls except tab, LF and CR, preventing their 6x
 overflowing the bounded packet; normal user-visible text and the 16 KiB UTF-8 limit are preserved.
 Latest quota check: 91% remaining. Context exceeded the user's 50% compaction threshold; no
 compaction tool is exposed. Recorded the checkpoint for user-triggered /compact before new work.
+
+2026-10-17 continuation after compaction: five-hour quota observed at 19% used; stop at 70%.
+Encrypted recovery: new store test RED (orphan survives) → GREEN 7/7; runtime unlock recovery
+RED (orphan survives) → GREEN real MessengerRuntimeTest 4/4 and full unit suite 55/55.
+New commands wait for initialization of the exact reopened database; transport subscribes before
+runtime readiness. Completed attachment IDs retain ciphertext; uncommitted/orphan and pending
+ciphertext are removed before imports or incoming offers can start.

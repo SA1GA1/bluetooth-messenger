@@ -50,6 +50,7 @@ class DefaultMessengerRepository @Inject constructor(
     override val transferBusy = files.busy
     private val heartbeat = MutableStateFlow(0L)
     private val commands = Mutex()
+    private val initializedDatabase = MutableStateFlow<OffGridDatabase?>(null)
 
     override val contacts = observe { db -> db.contacts().observe().map { rows -> rows.map { Contact(it.id, it.name, it.verified) } } }
     override val conversations = observe { db -> db.contacts().summaries().map { rows -> rows.map { row ->
@@ -65,6 +66,7 @@ class DefaultMessengerRepository @Inject constructor(
         scope.launch {
             session.state.collectLatest { state ->
                 if (state != SessionState.Ready) {
+                    initializedDatabase.value = null
                     mutableOwnId.value = null; mutableQr.value = null; mutablePairings.value = emptyList(); mutableErrors.value = null
                     groups.clearReady()
                     files.release()
@@ -78,15 +80,13 @@ class DefaultMessengerRepository @Inject constructor(
 
     private suspend fun runSession(): Nothing = supervisorScope {
         val own = identity.identity()
-        mutableOwnId.value = own.userId
-        mutableQr.value = IdentityCodec().encode(own)
         database.use { db ->
             db.messages().interruptSent()
-            db.attachments().incomplete().forEach { db.messages().fileProgress(it.messageId, 0, "Error", "Передача прервана. Повторите получение") }
         }
+        files.recover()
         launch { pairing.prompts().collect { mutablePairings.value = it } }
         launch { settings.settings.collect { if (!it.readReceipts) database.use { db -> db.messages().cancelReadReceipts() } } }
-        launch {
+        launch(start = CoroutineStart.UNDISPATCHED) {
             transport.events.collect { event ->
                 when (event) {
                     is TransportEvent.Packet -> {
@@ -111,6 +111,9 @@ class DefaultMessengerRepository @Inject constructor(
                 delay(2000)
             }
         }
+        initializedDatabase.value = checkNotNull(database.database.value)
+        mutableOwnId.value = own.userId
+        mutableQr.value = IdentityCodec().encode(own)
         awaitCancellation()
     }
 
@@ -215,6 +218,10 @@ class DefaultMessengerRepository @Inject constructor(
     }
     private suspend fun <T> command(block: suspend () -> T): T {
         check(session.state.value == SessionState.Ready) { "Сначала разблокируйте приложение" }
-        return tasks.run { commands.withLock { block().also { flush() } } }
+        return tasks.run {
+            val opened = checkNotNull(database.database.value) { "Приложение заблокировано" }
+            initializedDatabase.first { it === opened }
+            commands.withLock { block().also { flush() } }
+        }
     }
 }

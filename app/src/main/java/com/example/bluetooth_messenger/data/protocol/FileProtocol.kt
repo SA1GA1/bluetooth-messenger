@@ -327,6 +327,16 @@ class FileProtocol @Inject constructor(
     }
 
     fun delete(file: String) = store.delete(file)
+
+    suspend fun recover() {
+        val retained = database.use { db ->
+            db.attachments().incomplete().forEach {
+                db.messages().fileProgress(it.messageId, 0, "Error", "Передача прервана. Повторите получение")
+            }
+            db.attachments().completedIds().toSet()
+        }
+        store.recover(retained)
+    }
     private suspend fun acknowledgeFile(packet: WirePacket, sender: PeerIdentity) = queue.ephemeral(secure.direct(PacketKind.FileAck,
         sender, packet.conversation, JSONObject().put("ref", packet.id).bytes(), epoch = packet.epoch))
     private fun uuid(value: String): String = value.also { require(it.length == 36 && UUID.fromString(it).toString() == it) }

@@ -22,6 +22,7 @@ interface AttachmentDao {
     @Query("SELECT * FROM attachments WHERE messageId=:message") suspend fun forMessage(message: String): AttachmentEntity?
     @Query("SELECT a.* FROM attachments a JOIN messages m ON a.messageId=m.id WHERE m.conversationId=:conversation") suspend fun forConversation(conversation: String): List<AttachmentEntity>
     @Query("SELECT * FROM attachments WHERE complete=0") suspend fun incomplete(): List<AttachmentEntity>
+    @Query("SELECT id FROM attachments WHERE complete=1") suspend fun completedIds(): List<String>
     @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insert(file: AttachmentEntity)
     @Query("UPDATE attachments SET complete=1 WHERE id=:id") suspend fun complete(id: String)
 }
