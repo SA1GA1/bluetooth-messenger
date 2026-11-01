@@ -105,49 +105,54 @@ class FileProtocol @Inject constructor(
                 val address = withTimeout(45_000) { wifi.becomeOwner(identity.identity().userId) }
                 require(!address.isAnyLocalAddress && !address.isLoopbackAddress)
                 val server = ServerSocketChannel.open()
-                try { server.bind(InetSocketAddress(address, PORT)) } catch (failure: Throwable) { server.close(); throw failure }
-                job = tasks.launch {
-                    val progress = Channel<Int>(Channel.CONFLATED)
-                    val reporting = launch {
-                        for (percent in progress) database.use { it.messages().sendingProgress(packet.id, percent) }
-                    }
-                    try {
-                        withTimeout(120_000) {
-                            runInterruptible(Dispatchers.IO) {
-                                server.use { listener ->
-                                    listener.accept().use { client ->
-                                        val input = DataInputStream(Channels.newInputStream(client))
-                                        require(input.readInt() == MAGIC)
-                                        val requested = UUID(input.readLong(), input.readLong()).toString()
-                                        val token = ByteArray(32).also(input::readFully)
-                                        require(requested == file.id && MessageDigest.isEqual(token, file.token))
-                                        val output = DataOutputStream(Channels.newOutputStream(client))
-                                        output.writeLong(file.encryptedSize)
-                                        store.input(file.id).use { source ->
-                                            val buffer = ByteArray(65536)
-                                            var transferred = 0L
-                                            while (true) {
-                                                val count = source.read(buffer)
-                                                if (count < 0) break
-                                                output.write(buffer, 0, count)
-                                                transferred += count
-                                                progress.trySend((transferred * 100 / file.encryptedSize).toInt())
+                job = try {
+                    server.bind(InetSocketAddress(address, PORT))
+                    tasks.launch {
+                        val progress = Channel<Int>(Channel.CONFLATED)
+                        val reporting = launch {
+                            for (percent in progress) database.use { it.messages().sendingProgress(packet.id, percent) }
+                        }
+                        try {
+                            withTimeout(120_000) {
+                                runInterruptible(Dispatchers.IO) {
+                                    server.use { listener ->
+                                        listener.accept().use { client ->
+                                            val input = DataInputStream(Channels.newInputStream(client))
+                                            require(input.readInt() == MAGIC)
+                                            val requested = UUID(input.readLong(), input.readLong()).toString()
+                                            val token = ByteArray(32).also(input::readFully)
+                                            require(requested == file.id && MessageDigest.isEqual(token, file.token))
+                                            val output = DataOutputStream(Channels.newOutputStream(client))
+                                            output.writeLong(file.encryptedSize)
+                                            store.input(file.id).use { source ->
+                                                val buffer = ByteArray(65536)
+                                                var transferred = 0L
+                                                while (true) {
+                                                    val count = source.read(buffer)
+                                                    if (count < 0) break
+                                                    output.write(buffer, 0, count)
+                                                    transferred += count
+                                                    progress.trySend((transferred * 100 / file.encryptedSize).toInt())
+                                                }
+                                                check(transferred == file.encryptedSize)
                                             }
-                                            check(transferred == file.encryptedSize)
+                                            output.flush()
                                         }
-                                        output.flush()
                                     }
                                 }
                             }
+                        } catch (failure: CancellationException) { throw failure }
+                        catch (_: Exception) {
+                            database.use { it.messages().deliveryError(packet.id, target) }
+                        } finally {
+                            server.close()
+                            progress.close()
+                            withContext(NonCancellable) { reporting.cancelAndJoin() }
                         }
-                    } catch (failure: CancellationException) { throw failure }
-                    catch (_: Exception) {
-                        database.use { it.messages().deliveryError(packet.id, target) }
-                    } finally {
-                        server.close()
-                        progress.close()
-                        withContext(NonCancellable) { reporting.cancelAndJoin() }
-                    }
+                    }.also { active -> active.invokeOnCompletion { server.close() } }
+                } catch (failure: Throwable) {
+                    server.close()
+                    throw failure
                 }
                 true
             } catch (failure: Throwable) {

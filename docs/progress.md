@@ -94,3 +94,10 @@ insertion share one Room transaction, so opening the database again cannot dupli
 Ruling: store the notification marker in the unreleased v1 outbox schema, consistent with previous
 unreleased schema edits; already installed development builds need a local reset after this change.
 No migration from a published version is being removed; cost is resetting test/development data.
+
+Repository group notices: RED (no deferred notice) → GREEN 12/12 runtime/group instrumentation,
+55/55 unit tests. Text/location and attachment commands now explain absent recipients; committed
+delivery batches are announced by maintenance and remain deduplicated after unlock.
+File startup cancellation: RED BindException when rebinding a leaked socket → GREEN FileDeliveryTest
+11/11, including replacement admission blocked until Wi-Fi cleanup finishes. Listener is closed
+when task launch throws or its job completes before entering the body; normal TCP round trip passes.

@@ -65,6 +65,7 @@ class FileDeliveryTest {
         }
         val connects = AtomicInteger()
         val stops = AtomicInteger()
+        var onStop: (suspend () -> Unit)? = null
         val wifi = object : FileLink {
             override suspend fun becomeOwner(userId: String): InetAddress = linkAddress ?: error("Unexpected owner request")
             override suspend fun connectTo(userId: String): InetAddress {
@@ -72,7 +73,7 @@ class FileDeliveryTest {
                 linkAddress?.let { return it }
                 throw IOException("Simulated interrupted Wi-Fi Direct connection")
             }
-            override suspend fun stop() { stops.incrementAndGet() }
+            override suspend fun stop() { stops.incrementAndGet(); onStop?.invoke() }
         }
         val queue = PacketQueue(database, transport, clock)
         val directory = PeerDirectory(database, identity)
@@ -323,6 +324,42 @@ class FileDeliveryTest {
         assertEquals(1, b.sent.count { it.kind == PacketKind.FileAck })
         assertEquals(1, b.connects.get())
         assertFalse(a.files.busy.value)
+    }
+
+    @Test fun cancelledSessionDuringOwnerStartupDoesNotLeakListeningSocket() = runBlocking<Unit> {
+        val packet = outgoing()
+        val address = localSocketAddress()
+        a.linkAddress = address
+        a.tasks.cancel()
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { a.files.canSend(packet, b.id()) }
+        }
+        assertFalse(a.files.busy.value)
+        java.nio.channels.ServerSocketChannel.open().use {
+            it.bind(java.net.InetSocketAddress(address, 42187))
+        }
+    }
+
+    @Test fun ownerCannotRestartUntilPreviousWifiCleanupFinishes() = runBlocking<Unit> {
+        val packet = outgoing()
+        a.linkAddress = localSocketAddress()
+        assertTrue(a.files.canSend(packet, b.id()))
+        val stopping = CompletableDeferred<Unit>()
+        val allowStop = CompletableDeferred<Unit>()
+        a.onStop = { stopping.complete(Unit); allowStop.await() }
+        val release = async(Dispatchers.IO) { a.files.release() }
+        try {
+            withTimeout(5000) { stopping.await() }
+            assertTrue(a.files.busy.value)
+            assertFalse(a.files.canSend(packet, b.id()))
+        } finally {
+            allowStop.complete(Unit)
+            withTimeout(5000) { release.await() }
+            a.onStop = null
+        }
+        assertFalse(a.files.busy.value)
+        assertTrue(a.files.canSend(packet, b.id()))
+        a.files.release()
     }
 
     @Test fun socketTransferRejectsSignedPlaintextLengthThatDisagreesWithAuthenticatedCiphertext() = runBlocking<Unit> {
