@@ -80,7 +80,8 @@ class MessengerRuntimeTest {
             }, tasks, clock)
         val repository = DefaultMessengerRepository(database, identity, controller, settings, radio, radio, tasks, scope,
             PairingCoordinator(database, identity, secure, queue, clock), direct, membership, groups, queue,
-            PublicBroadcast(database, identity, radio, radio, settings, clock), files, clock)
+            PublicBroadcast(database, identity, radio, radio, settings, clock), files,
+            GroupDeliveryNotices(database, identity, radio, clock), clock)
         suspend fun id() = identity.identity().userId
         suspend fun ready() {
             withTimeout(5000) { controller.state.first { it == SessionState.Onboarding } }
@@ -187,5 +188,24 @@ class MessengerRuntimeTest {
             a.repository.exportFile(attachment.id) { exported }
             assertArrayEquals(contents, exported.toByteArray())
         }
+    }
+
+    @Test fun groupRuntimeExplainsDeferredDeliveryAndDoesNotRepeatAcknowledgementsOnUnlock() = runBlocking<Unit> {
+        val group = a.repository.createGroup("Поход", listOf(b.id()))
+        withTimeout(8000) { b.repository.conversations.first { rows -> rows.any { it.id == group } } }
+        a.radio.peers.value = emptyList()
+        a.repository.sendText(group, "Дождётся связи")
+        val deferred = a.repository.messages(group).first().filter { it.kind == ContentType.System }
+        assertTrue(deferred.any { it.text == "Контакт вне зоны. Доставка отложена." })
+        a.radio.peers.value = listOf(DiscoveredPeer(b.id(), "test", 0))
+        withTimeout(10000) {
+            a.repository.messages(group).first { rows -> rows.any { it.text == "Контакт получил 1 сообщение." } }
+        }
+        withContext(Dispatchers.Main) { a.controller.background() }
+        withTimeout(5000) { a.database.database.first { it == null } }
+        withContext(Dispatchers.Main) { a.controller.foreground(); a.controller.unlock("123456".toCharArray()) }
+        a.awaitRuntime()
+        assertEquals(1, a.repository.messages(group).first().count { it.text == "Контакт получил 1 сообщение." })
+        assertTrue(b.repository.messages(group).first().none { it.kind == ContentType.System })
     }
 }

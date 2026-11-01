@@ -37,6 +37,7 @@ class DefaultMessengerRepository @Inject constructor(
     private val queue: PacketQueue,
     private val public: PublicBroadcast,
     private val files: FileProtocol,
+    private val notices: GroupDeliveryNotices,
     private val clock: AppClock,
 ) : MessengerRepository {
     private val mutableOwnId = MutableStateFlow<String?>(null)
@@ -103,6 +104,7 @@ class DefaultMessengerRepository @Inject constructor(
                 try {
                     pairing.maintenance()
                     files.maintenance()
+                    notices.delivered()
                     database.use { db -> db.messages().expire(clock.elapsedMillis() - 120_000); db.protocol().expirePublic(clock.wallMillis()) }
                     heartbeat.value++
                     flush()
@@ -174,10 +176,16 @@ class DefaultMessengerRepository @Inject constructor(
     }
     private suspend fun sendContent(conversation: String, body: JSONObject) {
         val chat = database.use { checkNotNull(it.contacts().conversation(conversation)) }
-        if (chat.type == "Group") groups.send(conversation, body) else direct.send(conversation, body)
+        if (chat.type == "Group") {
+            groups.send(conversation, body)
+            notices.deferred(conversation)
+        } else direct.send(conversation, body)
     }
     override suspend fun sendPublic(text: String) = command { public.send(text) }
-    override suspend fun sendAttachment(conversation: String, source: AttachmentSource, photo: Boolean) = command { files.send(conversation, source, photo) }
+    override suspend fun sendAttachment(conversation: String, source: AttachmentSource, photo: Boolean) = command {
+        files.send(conversation, source, photo)
+        notices.deferred(conversation)
+    }
     override suspend fun createGroup(name: String, members: List<String>) = command { membership.create(name, members) }
     override suspend fun addGroupMember(group: String, member: String) = command { files.release(); membership.add(group, member) }
     override suspend fun removeGroupMember(group: String, member: String) = command { files.release(); membership.remove(group, member) }
