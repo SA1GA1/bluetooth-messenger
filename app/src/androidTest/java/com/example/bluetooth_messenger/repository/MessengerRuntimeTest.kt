@@ -43,7 +43,9 @@ class MessengerRuntimeTest {
         val vault = PinVault(context)
         val settings = TestSettings()
         val clock = TestClock()
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val runtimeFailure = MutableStateFlow<Throwable?>(null)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate +
+            CoroutineExceptionHandler { _, failure -> runtimeFailure.value = failure })
         val tasks = SessionTasks(scope)
         var interruptNextSend = false
         var sendStarted: CompletableDeferred<Unit>? = null
@@ -103,6 +105,7 @@ class MessengerRuntimeTest {
             context.getSharedPreferences("vault", 0).edit().clear().commit()
             context.deleteDatabase("offgrid.db")
             context.removeFiles()
+            assertNull(runtimeFailure.value)
         }
     }
     private lateinit var a: Node
@@ -207,5 +210,23 @@ class MessengerRuntimeTest {
         a.awaitRuntime()
         assertEquals(1, a.repository.messages(group).first().count { it.text == "Контакт получил 1 сообщение." })
         assertTrue(b.repository.messages(group).first().none { it.kind == ContentType.System })
+    }
+
+    @Test fun recoveryFailureRejectsCommandsWithoutHangingOrStartingExchange() = runBlocking<Unit> {
+        withContext(Dispatchers.Main) { a.controller.background() }
+        withTimeout(5000) {
+            a.database.database.first { it == null }
+            a.repository.ownQr.first { it == null }
+        }
+        File(a.context.filesDir, "attachments/.pending/unexpected-directory").mkdirs()
+        withContext(Dispatchers.Main) { a.controller.foreground(); a.controller.unlock("123456".toCharArray()) }
+        val failure = withTimeout(5000) {
+            runCatching { a.repository.sendText(chat, "Не отправлять") }.exceptionOrNull()
+        }
+        assertNotNull(failure)
+        assertNotNull(a.repository.errors.value)
+        assertNull(a.repository.ownQr.value)
+        assertEquals(0, a.radio.events.subscriptionCount.value)
+        assertTrue(a.database.use { it.messages().observe(chat).first() }.isEmpty())
     }
 }

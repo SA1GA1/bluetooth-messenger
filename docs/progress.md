@@ -101,3 +101,8 @@ delivery batches are announced by maintenance and remain deduplicated after unlo
 File startup cancellation: RED BindException when rebinding a leaked socket → GREEN FileDeliveryTest
 11/11, including replacement admission blocked until Wi-Fi cleanup finishes. Listener is closed
 when task launch throws or its job completes before entering the body; normal TCP round trip passes.
+
+Recovery failure: RED (uncaught initialization error; commands wait indefinitely) → GREEN
+MessengerRuntimeTest 6/6. Initialization publishes either success or failure for the exact open
+Room instance. Failed startup rejects commands, shows an error, does not subscribe to packets,
+and remains cancellable by session lock. Test scope captures unexpected coroutine exceptions.
