@@ -106,3 +106,11 @@ Recovery failure: RED (uncaught initialization error; commands wait indefinitely
 MessengerRuntimeTest 6/6. Initialization publishes either success or failure for the exact open
 Room instance. Failed startup rejects commands, shows an error, does not subscribe to packets,
 and remains cancellable by session lock. Test scope captures unexpected coroutine exceptions.
+
+Final build uncovered RestrictedApi errors in MainActivity.dispatchKeyEvent. Replaced custom key
+and touch dispatch with public Activity.onUserInteraction (verified in installed SDK source);
+Compose text fields already report IME edits explicitly. Lint RED 3 errors → GREEN 0 errors,
+16 warnings. assembleDebug, testDebugUnitTest (55/55), lintDebug and assembleRelease PASS together
+with frozen sources. Remaining warnings: targetSdk 36, template colors/label and KTX suggestions;
+none are suppressed. Earlier stalled Lint is superseded by this successful complete run.
+Removed four unreferenced legacy UI state/event models and unused lifecycle-process dependency.

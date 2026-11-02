@@ -1,8 +1,6 @@
 package com.example.bluetooth_messenger
 
 import android.os.Bundle
-import android.view.KeyEvent
-import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -21,19 +19,21 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        biometric = NativeBiometric(this,vm,lifecycleScope)
+        biometric = NativeBiometric(this, vm, lifecycleScope)
         setContent {
             BluetoothmessengerTheme {
-                OffGridApp(vm,onClose = { vm.session.closeTask(); finishAndRemoveTask() },onBiometric = biometric::authenticate)
+                OffGridApp(vm, onClose = { vm.session.closeTask(); finishAndRemoveTask() }, onBiometric = biometric::authenticate)
             }
         }
     }
     override fun onStart() { super.onStart(); vm.session.foreground() }
     override fun onStop() {
         biometric.cancel()
-        if(!isChangingConfigurations) vm.session.background()
+        if (!isChangingConfigurations) vm.session.background()
         super.onStop()
     }
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean { vm.session.interacted(); return super.dispatchTouchEvent(event) }
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean { vm.session.interacted(); return super.dispatchKeyEvent(event) }
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        vm.session.interacted()
+    }
 }
