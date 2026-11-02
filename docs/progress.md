@@ -114,3 +114,23 @@ Compose text fields already report IME edits explicitly. Lint RED 3 errors → G
 with frozen sources. Remaining warnings: targetSdk 36, template colors/label and KTX suggestions;
 none are suppressed. Earlier stalled Lint is superseded by this successful complete run.
 Removed four unreferenced legacy UI state/event models and unused lifecycle-process dependency.
+
+Final fresh-context review of 861c44d..d502ebd: two Important findings, no Critical or Minor.
+Final: fixed group injection through Direct packets — removed member/closed group regression RED
+(accepted forged scope) → GREEN; require Direct kind, epoch zero, canonical direct ID and direct chat.
+Final: fixed recursive JSON stack exhaustion before authentication — Android regression RED
+(StackOverflowError with 20,000 arrays) → GREEN; iterative strict JsonReader preflight bounds depth
+at 16 before JSONObject. Lenient grammar is rejected; quoted brackets remain valid message text.
+Review fix pass: 17/17 direct/group/parser instrumentation and 55/55 unit tests PASS.
+Final: Ruling: physical interoperability and hardware-only Keystore remain acceptance gates — no
+physical devices connected, emulator results cannot establish radio/TEE behavior — cost if wrong:
+unsupported hardware behavior must still be corrected before MVP acceptance.
+Final: Ruling: screenshot/clipboard roadmap remains deferred — explicit post-MVP scope — cost if
+wrong: those protections require a later scoped change, not a claim that they already exist.
+Final: Ruling: unreleased v1 schema reset policy stands — no published database to migrate — cost:
+existing development installs may need the confirmed local reset.
+
+Before review fixes, full available instrumentation PASS 60/60 (hardware identity test excluded).
+Release ZIP alignment PASS with zipalign -c -P 16 4; all 10 arm64/x86_64 native libraries in both
+APK variants have ELF LOAD alignment >=16384. Final verification after review fixes follows.
+User updated quota stop threshold to 15% remaining (85% used), superseding the earlier 30% request.
