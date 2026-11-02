@@ -1,35 +1,40 @@
-# Resume checkpoint
+# MVP completion checkpoint
 
-Resumed on 2026-10-17. Continue the approved MVP, without post-MVP technologies.
+Completed software scope on 2026-10-17. Stop here as requested; no post-MVP work.
 Branch: `feature/offgrid-mvp`; original baseline: `861c44d`.
 
-## Current implementation
+## Completion status
 
-Native BLE/GATT discovery and bounded packets; SQLCipher/Room; hardware-only identity;
-PIN/biometric session controller; mutual QR/SAS pairing; durable direct delivery and receipts;
-creator-controlled group epochs; anonymous public broadcasts; encrypted attachment storage;
-native Wi-Fi Direct adapter and authenticated encrypted-file socket protocol; Compose navigation,
-chats, groups, QR/camera, photos, SAF, coordinates and settings are integrated.
+Software MVP is complete. User explicitly excluded physical-device acceptance and requested
+stopping after completion. Do not resume feature work automatically or add post-MVP technologies.
+Implementation commit: `af4f808`; final documentation follows on the same branch.
 
-Read `docs/progress.md` for verification. This is a development checkpoint, not completed MVP acceptance.
+Implemented: native BLE/GATT discovery and bounded packets; SQLCipher/Room; hardware-only identity;
+PIN/biometric session lifecycle; mutual QR/SAS pairing; durable direct delivery and receipts;
+creator-controlled group epochs and local delivery notices; anonymous public broadcasts;
+encrypted attachments with recovery, progress and cancellation; native Wi-Fi Direct/socket adapter;
+Compose chats/groups/QR/camera/photos/SAF/coordinates/settings and history paging.
 
-## Next work, in order
+Final verification on the completed implementation:
+- Debug and unsigned release builds: PASS.
+- Unit tests: 55/55, no failures/errors/skips.
+- Emulator instrumentation: 63/63, no failures/errors/skips.
+- Lint: 0 errors, 16 nonblocking warnings (target API, template resources/label, KTX suggestions).
+- Release ZIP alignment: PASS; all 10 arm64/x86_64 native libraries in each APK have ELF LOAD
+  alignment >=16384.
+- Independent branch review: two Important findings reproduced RED and fixed GREEN; no Critical
+  or Minor findings. Direct packets cannot inject group messages; strict iterative JSON preflight
+  bounds nesting before recursive parsing. No outstanding software findings from that review.
 
-1. Finish local group notices for deferred/delivered messages and safe cleanup of encrypted
-   orphan/pending files after process death. Serialize startup cleanup against new imports.
-2. Extend file cancellation tests around simultaneous cleanup/start. Real repository lifecycle
-   now has three passing integration tests; screen tests still inject fake repositories.
-3. Runtime, source-side file progress, elapsed-time Ack expiry and C0 text validation were checked
-   on 2026-10-17: 54 unit tests and 19 selected instrumentation tests PASS. Source progress uses
-   a conflated reporting channel; FileAck persists 100%. Tabs/newlines/carriage returns are allowed.
-4. Remove unused legacy initialization/UI models if no longer referenced. Improve formatting in
-   compact UI/protocol methods without introducing additional architecture layers.
-5. Repeat full debug build, unit tests, Lint and instrumentation; build release; verify APK native
-   16 KiB alignment. Latest integrated Lint did not finish: PSI walking loop after concurrent edits;
-   its Gradle daemon was stopped. Do not call this a passing final Lint run.
-6. Run physical acceptance from `docs/device-acceptance.md`: two phones for BLE/text/files,
-   three for group/offline/rotation, hardware Keystore and no-GMS installation. No physical radios,
-   native Wi-Fi Direct interoperability or hardware TEE acceptance has been demonstrated.
+The first combined final test attempt could not attach to the emulator and ran zero tests.
+After emulator restart the entire 63-test suite passed; this is the final instrumentation result.
+`KeystoreIdentityTest` is intentionally excluded on the emulator and remains a hardware check.
+Physical BLE/Wi-Fi Direct, StrongBox/TEE and no-GMS acceptance have NOT been demonstrated.
+See `docs/device-acceptance.md` when the user elects to perform that separate acceptance.
+
+APK artifacts for this workspace:
+- `/private/tmp/offgrid-build/app/outputs/apk/debug/app-debug.apk` (debug-signed, installable).
+- `/private/tmp/offgrid-build/app/outputs/apk/release/app-release-unsigned.apk` (unsigned build).
 
 ## Build environment
 
@@ -68,14 +73,9 @@ an emulator; never add a silent software fallback to make onboarding pass.
 - Preserve the user's `.idea/deviceManager.xml` staged deletion/untracked replacement and
   staged/working differences in `gradle/wrapper/gradle-wrapper.properties`. Never blanket-stage.
 
-## Usage and context request (2026-10-17)
+## User stop and quota instructions
 
-User requested stopping when the five-hour quota has 30% remaining. Local session JSONL events
-`event_msg` / `token_count` expose `rate_limits.primary` (`window_minutes=300`, `used_percent`).
-Read only this thread via CODEX_THREAD_ID. `/private/tmp/offgrid-usage.py` prints a bounded status;
-check between tasks and stop at used_percent >=70. Latest check: 9% used, 91% remaining.
-
-User also requested compaction above 50% context. Latest observed input/window ratio: 53.3%.
-No callable compaction tool was exposed; do not claim manual summaries actually freed context.
-Current work was finished to a verified checkpoint; user can invoke `/compact` before the next
-implementation stage. This file and docs/progress.md preserve the continuation state.
+Earlier 30% and 15% quota stop thresholds were explicitly revoked by the user.
+The latest instruction is to finish the software MVP, commit everything belonging to this work,
+and stop. That instruction takes priority over continuing merely because quota remains.
+Context was compacted during this development run; `docs/progress.md` is the execution ledger.

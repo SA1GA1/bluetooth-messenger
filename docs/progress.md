@@ -134,3 +134,18 @@ Before review fixes, full available instrumentation PASS 60/60 (hardware identit
 Release ZIP alignment PASS with zipalign -c -P 16 4; all 10 arm64/x86_64 native libraries in both
 APK variants have ELF LOAD alignment >=16384. Final verification after review fixes follows.
 User updated quota stop threshold to 15% remaining (85% used), superseding the earlier 30% request.
+
+## Software MVP completion (2026-10-17)
+
+User requested completing the remaining software work and stopping, excluding real-device tests.
+Implementation af4f808 final verification: assembleDebug + testDebugUnitTest + lintDebug +
+assembleRelease PASS (exit 0); 55 unit tests, 0 failures/errors/skips; Lint 0 errors/16 warnings.
+Complete available emulator suite PASS: 63 tests, 0 failures/errors/skips. KeystoreIdentityTest
+requires hardware and is excluded explicitly. An earlier combined attempt failed to attach and
+ran 0 tests; restarting the emulator and rerunning the complete suite resolved that environment
+failure. No test failure was suppressed or reclassified as a passing test.
+Final release ZIP alignment PASS; both APKs contain 10 checked arm64/x86_64 libraries with
+ELF LOAD alignment >=16384. Independent review findings are fixed and covered by regressions.
+Software implementation tasks are complete; physical acceptance remains explicitly unperformed.
+User's latest stop instruction supersedes all previous quota thresholds. Keep the existing branch,
+push final documentation, preserve unrelated wrapper/IDE changes, and stop without roadmap work.
