@@ -50,7 +50,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     implementation(libs.navigation.compose)
-    implementation(libs.lifecycle.process)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.zxing)
 
@@ -70,9 +69,6 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)
-
-
-
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -81,8 +77,6 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-
-
 }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
