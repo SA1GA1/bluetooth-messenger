@@ -44,6 +44,10 @@ class DirectMessages @Inject constructor(
     }
 
     suspend fun receive(packet: WirePacket) {
+        require(packet.kind == PacketKind.Direct && packet.epoch == 0)
+        require(packet.conversation == directConversationId(identity.identity().userId, packet.sender))
+        val chat = database.use { it.contacts().conversation(packet.conversation) }
+        require(chat == null || (chat.type == "Direct" && chat.active))
         val sender = directory.conversation(packet.sender, packet.conversation, packet.epoch)
         val content = json(secure.open(packet, sender))
         require(content.getString("kind") in setOf("Text", "Location"))

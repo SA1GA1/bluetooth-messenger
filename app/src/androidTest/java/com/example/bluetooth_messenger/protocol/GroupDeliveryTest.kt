@@ -83,6 +83,22 @@ class GroupDeliveryTest {
     }
     private fun text(value: String) = JSONObject().put("kind", "Text").put("text", value)
 
+    @Test fun directPacketsCannotBypassGroupRemovalOrClosedMembership() = runBlocking<Unit> {
+        val epoch = a.database.use { it.contacts().conversation(group) }!!.epoch
+        a.groups.remove(group, c.id())
+        a.flush(b, c)
+        val injected = c.secure.direct(PacketKind.Direct, b.identity.identity(), group,
+            text("removed member").bytes(), epoch = epoch)
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { b.direct.receive(injected) } }
+        assertNull(b.database.use { it.messages().find(injected.id) })
+        a.groups.leave(group)
+        a.flush(b)
+        val closed = a.secure.direct(PacketKind.Direct, b.identity.identity(), group,
+            text("closed group").bytes(), epoch = epoch)
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { b.direct.receive(closed) } }
+        assertNull(b.database.use { it.messages().find(closed.id) })
+    }
+
     @Test fun deliveryNoticesBatchRecipientsAndRemainDeduplicatedAfterReopening() = runBlocking<Unit> {
         val radio = TestRadio()
         radio.peers.value = listOf(com.example.bluetooth_messenger.domain.model.DiscoveredPeer(b.id(), "test", 0))
