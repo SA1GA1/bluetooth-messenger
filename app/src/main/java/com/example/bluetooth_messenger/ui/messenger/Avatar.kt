@@ -12,9 +12,23 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun ContactAvatar(name: String, online: Boolean) {
-    Box(Modifier.size(46.dp).background(MaterialTheme.colorScheme.primaryContainer,CircleShape),contentAlignment = Alignment.Center) {
-        val initials = name.trim().split(Regex("\\s+")).take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("")
-        Text(initials,style = MaterialTheme.typography.titleMedium)
-        if(online) Box(Modifier.align(Alignment.BottomEnd).size(11.dp).background(MaterialTheme.colorScheme.primary,CircleShape))
+    Box(
+        Modifier.size(46.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        val initials =
+            name
+                .trim()
+                .split(Regex("\\s+"))
+                .take(2)
+                .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+                .joinToString("")
+        Text(initials, style = MaterialTheme.typography.titleMedium)
+        if (online)
+            Box(
+                Modifier.align(Alignment.BottomEnd)
+                    .size(11.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+            )
     }
 }
