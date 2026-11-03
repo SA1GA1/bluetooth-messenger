@@ -5,6 +5,8 @@ import android.bluetooth.*
 import android.content.Context
 import android.os.Build
 import com.example.bluetooth_messenger.domain.model.Limits
+import java.security.SecureRandom
+import java.util.UUID
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -14,8 +16,6 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
-import java.security.SecureRandom
-import java.util.UUID
 
 @SuppressLint("MissingPermission")
 class GattPacketSender(private val context: Context) {
@@ -31,33 +31,63 @@ class GattPacketSender(private val context: Context) {
             val ready = CompletableDeferred<BluetoothGattCharacteristic>()
             var write = CompletableDeferred<Unit>()
             var mtu = 23
-            val callback = object : BluetoothGattCallback() {
-                override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, state: Int) {
-                    if (status == BluetoothGatt.GATT_SUCCESS && state == BluetoothProfile.STATE_CONNECTED) {
-                        runCatching { if (!gatt.requestMtu(517)) check(gatt.discoverServices()) }
+            val callback =
+                object : BluetoothGattCallback() {
+                    override fun onConnectionStateChange(
+                        gatt: BluetoothGatt,
+                        status: Int,
+                        state: Int,
+                    ) {
+                        if (
+                            status == BluetoothGatt.GATT_SUCCESS &&
+                                state == BluetoothProfile.STATE_CONNECTED
+                        ) {
+                            runCatching {
+                                    if (!gatt.requestMtu(517)) check(gatt.discoverServices())
+                                }
+                                .onFailure { ready.completeExceptionally(it) }
+                        } else if (
+                            state == BluetoothProfile.STATE_DISCONNECTED ||
+                                status != BluetoothGatt.GATT_SUCCESS
+                        ) {
+                            val failure = IllegalStateException("BLE-соединение прервано ($status)")
+                            ready.completeExceptionally(failure)
+                            write.completeExceptionally(failure)
+                        }
+                    }
+
+                    override fun onMtuChanged(gatt: BluetoothGatt, value: Int, status: Int) {
+                        if (status == BluetoothGatt.GATT_SUCCESS) mtu = value.coerceIn(23, 517)
+                        runCatching { check(gatt.discoverServices()) { "Сервис BLE недоступен" } }
                             .onFailure { ready.completeExceptionally(it) }
-                    } else if (state == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
-                        val failure = IllegalStateException("BLE-соединение прервано ($status)")
-                        ready.completeExceptionally(failure)
-                        write.completeExceptionally(failure)
+                    }
+
+                    override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+                        val characteristic = gatt.getService(SERVICE)?.getCharacteristic(RECEIVE)
+                        if (status == BluetoothGatt.GATT_SUCCESS && characteristic != null)
+                            ready.complete(characteristic)
+                        else
+                            ready.completeExceptionally(
+                                IllegalStateException("Сервис OffGrid не найден")
+                            )
+                    }
+
+                    override fun onCharacteristicWrite(
+                        gatt: BluetoothGatt,
+                        characteristic: BluetoothGattCharacteristic,
+                        status: Int,
+                    ) {
+                        if (status == BluetoothGatt.GATT_SUCCESS) write.complete(Unit)
+                        else
+                            write.completeExceptionally(
+                                IllegalStateException("Ошибка передачи BLE ($status)")
+                            )
                     }
                 }
-                override fun onMtuChanged(gatt: BluetoothGatt, value: Int, status: Int) {
-                    if (status == BluetoothGatt.GATT_SUCCESS) mtu = value.coerceIn(23, 517)
-                    runCatching { check(gatt.discoverServices()) { "Сервис BLE недоступен" } }
-                        .onFailure { ready.completeExceptionally(it) }
-                }
-                override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-                    val characteristic = gatt.getService(SERVICE)?.getCharacteristic(RECEIVE)
-                    if (status == BluetoothGatt.GATT_SUCCESS && characteristic != null) ready.complete(characteristic)
-                    else ready.completeExceptionally(IllegalStateException("Сервис OffGrid не найден"))
-                }
-                override fun onCharacteristicWrite(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
-                    if (status == BluetoothGatt.GATT_SUCCESS) write.complete(Unit)
-                    else write.completeExceptionally(IllegalStateException("Ошибка передачи BLE ($status)"))
-                }
-            }
-            val gatt = checkNotNull(device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE))
+            val gatt =
+                checkNotNull(
+                    device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
+                )
             active = gatt
             try {
                 withTimeout(60_000) {
@@ -65,13 +95,19 @@ class GattPacketSender(private val context: Context) {
                     for (frame in BleFrames().split(bytes, mtu, random.nextInt())) {
                         write = CompletableDeferred()
                         @Suppress("DEPRECATION")
-                        val accepted = if (Build.VERSION.SDK_INT >= 33) {
-                            gatt.writeCharacteristic(characteristic, frame, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == BluetoothStatusCodes.SUCCESS
-                        } else {
-                            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                            characteristic.value = frame
-                            gatt.writeCharacteristic(characteristic)
-                        }
+                        val accepted =
+                            if (Build.VERSION.SDK_INT >= 33) {
+                                gatt.writeCharacteristic(
+                                    characteristic,
+                                    frame,
+                                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT,
+                                ) == BluetoothStatusCodes.SUCCESS
+                            } else {
+                                characteristic.writeType =
+                                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                                characteristic.value = frame
+                                gatt.writeCharacteristic(characteristic)
+                            }
                         check(accepted) { "BLE занят" }
                         withTimeout(5_000) { write.await() }
                     }
@@ -79,7 +115,10 @@ class GattPacketSender(private val context: Context) {
             } finally {
                 runCatching { gatt.disconnect() }
                 runCatching { gatt.close() }
-                if (active === gatt) { active = null; activeJob = null }
+                if (active === gatt) {
+                    active = null
+                    activeJob = null
+                }
             }
         }
     }

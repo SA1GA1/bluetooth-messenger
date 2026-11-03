@@ -4,7 +4,14 @@ import com.example.bluetooth_messenger.domain.model.Limits
 import java.nio.ByteBuffer
 
 class BleFrames {
-    private data class Transfer(val bytes: ByteArray, val count: Int, val started: Long, var index: Int = 0, var offset: Int = 0)
+    private data class Transfer(
+        val bytes: ByteArray,
+        val count: Int,
+        val started: Long,
+        var index: Int = 0,
+        var offset: Int = 0,
+    )
+
     private val incoming = mutableMapOf<Pair<String, Int>, Transfer>()
 
     fun split(packet: ByteArray, mtu: Int, transferId: Int): List<ByteArray> {
@@ -15,13 +22,15 @@ class BleFrames {
         return (0 until count).map { index ->
             val start = index * capacity
             val end = minOf(start + capacity, packet.size)
-            ByteBuffer.allocate(HEADER_SIZE + end - start).apply {
-                putInt(transferId)
-                putShort(index.toShort())
-                putShort(count.toShort())
-                putInt(packet.size)
-                put(packet, start, end - start)
-            }.array()
+            ByteBuffer.allocate(HEADER_SIZE + end - start)
+                .apply {
+                    putInt(transferId)
+                    putShort(index.toShort())
+                    putShort(count.toShort())
+                    putInt(packet.size)
+                    put(packet, start, end - start)
+                }
+                .array()
         }
     }
 
@@ -42,8 +51,12 @@ class BleFrames {
             incoming[token] = Transfer(ByteArray(length), count, nowMillis)
         }
         val transfer = incoming[token] ?: return null
-        if (transfer.index != index || transfer.count != count || transfer.bytes.size != length ||
-            transfer.offset + buffer.remaining() > length) {
+        if (
+            transfer.index != index ||
+                transfer.count != count ||
+                transfer.bytes.size != length ||
+                transfer.offset + buffer.remaining() > length
+        ) {
             incoming.remove(token)
             return null
         }
@@ -57,7 +70,11 @@ class BleFrames {
     }
 
     @Synchronized
-    fun clear() { incoming.clear() }
+    fun clear() {
+        incoming.clear()
+    }
 
-    private companion object { const val HEADER_SIZE = 12 }
+    private companion object {
+        const val HEADER_SIZE = 12
+    }
 }
