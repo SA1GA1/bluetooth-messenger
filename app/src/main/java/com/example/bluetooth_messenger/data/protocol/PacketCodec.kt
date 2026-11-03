@@ -7,7 +7,23 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.util.UUID
 
-enum class PacketKind { PairRequest, PairAccept, PairConfirm, PairDone, Direct, Ack, Read, GroupRoster, GroupLeave, GroupMessage, FileOffer, FileReady, FileAck, Public, GroupReady }
+enum class PacketKind {
+    PairRequest,
+    PairAccept,
+    PairConfirm,
+    PairDone,
+    Direct,
+    Ack,
+    Read,
+    GroupRoster,
+    GroupLeave,
+    GroupMessage,
+    FileOffer,
+    FileReady,
+    FileAck,
+    Public,
+    GroupReady,
+}
 
 data class WirePacket(
     val kind: PacketKind,
@@ -23,28 +39,38 @@ data class WirePacket(
 
 class PacketCodec {
     fun unsigned(packet: WirePacket): ByteArray {
-        require(packet.body.size <= Limits.PACKET_BYTES - 256 && packet.epoch >= 0 && packet.timestamp >= 0)
-        return ByteArrayOutputStream().also { output ->
-            DataOutputStream(output).use {
-                it.writeInt(0x4f464731)
-                it.writeByte(1)
-                it.writeByte(packet.kind.ordinal)
-                listOf(packet.id, packet.sender, packet.target, packet.conversation).forEach { id ->
-                    require(id.length == 36 && UUID.fromString(id).toString() == id)
-                    val uuid = UUID.fromString(id)
-                    it.writeLong(uuid.mostSignificantBits)
-                    it.writeLong(uuid.leastSignificantBits)
+        require(
+            packet.body.size <= Limits.PACKET_BYTES - 256 &&
+                packet.epoch >= 0 &&
+                packet.timestamp >= 0
+        )
+        return ByteArrayOutputStream()
+            .also { output ->
+                DataOutputStream(output).use {
+                    it.writeInt(0x4f464731)
+                    it.writeByte(1)
+                    it.writeByte(packet.kind.ordinal)
+                    listOf(packet.id, packet.sender, packet.target, packet.conversation).forEach {
+                        id ->
+                        require(id.length == 36 && UUID.fromString(id).toString() == id)
+                        val uuid = UUID.fromString(id)
+                        it.writeLong(uuid.mostSignificantBits)
+                        it.writeLong(uuid.leastSignificantBits)
+                    }
+                    it.writeInt(packet.epoch)
+                    it.writeLong(packet.timestamp)
+                    it.writeInt(packet.body.size)
+                    it.write(packet.body)
                 }
-                it.writeInt(packet.epoch)
-                it.writeLong(packet.timestamp)
-                it.writeInt(packet.body.size)
-                it.write(packet.body)
             }
-        }.toByteArray()
+            .toByteArray()
     }
 
     fun encode(packet: WirePacket): ByteArray {
-        require(if (packet.kind == PacketKind.Public) packet.signature.isEmpty() else packet.signature.size in 8..80)
+        require(
+            if (packet.kind == PacketKind.Public) packet.signature.isEmpty()
+            else packet.signature.size in 8..80
+        )
         return unsigned(packet) + byteArrayOf(packet.signature.size.toByte()) + packet.signature
     }
 
@@ -53,7 +79,8 @@ class PacketCodec {
         try {
             val input = DataInputStream(ByteArrayInputStream(bytes))
             require(input.readInt() == 0x4f464731 && input.readUnsignedByte() == 1)
-            val kind = PacketKind.entries.getOrNull(input.readUnsignedByte()) ?: error("Unknown packet")
+            val kind =
+                PacketKind.entries.getOrNull(input.readUnsignedByte()) ?: error("Unknown packet")
             fun id() = UUID(input.readLong(), input.readLong()).toString()
             val messageId = id()
             val sender = id()
@@ -68,8 +95,17 @@ class PacketCodec {
             val signatureSize = input.readUnsignedByte()
             require(signatureSize == input.available())
             require(if (kind == PacketKind.Public) signatureSize == 0 else signatureSize in 8..80)
-            return WirePacket(kind, messageId, sender, target, conversation, epoch, timestamp,
-                body, ByteArray(signatureSize).also(input::readFully))
+            return WirePacket(
+                kind,
+                messageId,
+                sender,
+                target,
+                conversation,
+                epoch,
+                timestamp,
+                body,
+                ByteArray(signatureSize).also(input::readFully),
+            )
         } catch (failure: Exception) {
             throw IllegalArgumentException("Некорректный пакет OffGrid", failure)
         }
