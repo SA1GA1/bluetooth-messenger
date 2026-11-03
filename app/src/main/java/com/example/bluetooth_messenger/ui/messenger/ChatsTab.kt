@@ -20,35 +20,48 @@ internal fun Chats(vm: AppViewModel) {
     val contacts by vm.contacts.collectAsState()
     val own by vm.repository.ownId.collectAsState()
     var refreshing by remember { mutableStateOf(false) }
-    PullToRefreshBox(isRefreshing = refreshing, onRefresh = {
-        if(!refreshing) {
-            refreshing = true
-            vm.action {
-                try { vm.session.reconnect() }
-                finally { refreshing = false }
-            }
-        }
-    }, modifier = Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize()) {
-            if(conversations.isEmpty()) item {
-                Text("Начните с QR-обмена или поиска рядом",Modifier.padding(24.dp))
-            }
-            items(conversations,key = { it.id }) { conversation ->
-                val online = conversation.type == ConversationType.Direct && own != null && contacts.any { contact ->
-                    directConversationId(own!!,contact.id) == conversation.id && peers.any { it.userId == contact.id }
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = {
+            if (!refreshing) {
+                refreshing = true
+                vm.action {
+                    try {
+                        vm.session.reconnect()
+                    } finally {
+                        refreshing = false
+                    }
                 }
+            }
+        },
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        LazyColumn(Modifier.fillMaxSize()) {
+            if (conversations.isEmpty())
+                item {
+                    Text("Начните с QR-обмена или поиска рядом", Modifier.padding(24.dp))
+                }
+            items(conversations, key = { it.id }) { conversation ->
+                val online =
+                    conversation.type == ConversationType.Direct &&
+                        own != null &&
+                        contacts.any { contact ->
+                            directConversationId(own!!, contact.id) == conversation.id &&
+                                peers.any { it.userId == contact.id }
+                        }
                 ListItem(
                     headlineContent = { Text(conversation.name) },
-                    supportingContent = { Text(conversation.lastText,maxLines = 2) },
-                    leadingContent = { ContactAvatar(conversation.name,online) },
+                    supportingContent = { Text(conversation.lastText, maxLines = 2) },
+                    leadingContent = { ContactAvatar(conversation.name, online) },
                     trailingContent = {
                         Column {
                             Text(timeLabel(conversation.updatedAt))
-                            if(conversation.unreadCount > 0) Badge { Text("${conversation.unreadCount}") }
+                            if (conversation.unreadCount > 0)
+                                Badge { Text("${conversation.unreadCount}") }
                             Text("🔒 E2E")
                         }
                     },
-                    modifier = Modifier.clickable { vm.open(conversation.id) }
+                    modifier = Modifier.clickable { vm.open(conversation.id) },
                 )
             }
         }
