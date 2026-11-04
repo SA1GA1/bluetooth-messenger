@@ -69,7 +69,8 @@ an emulator; never add a silent software fallback to make onboarding pass.
   guarantee contribution squares; contributions require default-branch inclusion and linked email.
 - Existing implementation history was rewritten only after explicit user request; default `main`
   remains at baseline. Local backups are under `refs/codex/backups/`; do not push those refs.
-- README.md is now ignored/untracked at the user's request and remains on disk as the specification.
+- README.md is tracked again at the user's request and contains a short feature/stack overview.
+  The agreed requirements are preserved separately in `docs/mvp-spec.md`.
 - Preserve the user's `.idea/deviceManager.xml` staged deletion/untracked replacement and
   staged/working differences in `gradle/wrapper/gradle-wrapper.properties`. Never blanket-stage.
 

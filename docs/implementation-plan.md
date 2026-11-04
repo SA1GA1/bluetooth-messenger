@@ -1,6 +1,6 @@
 # OffGrid MVP implementation plan
 
-Spec: README.md, актуальный контракт MVP имеет приоритет над исходным ТЗ.
+Spec: [согласованный контракт MVP](mvp-spec.md). README.md содержит краткое описание проекта.
 
 ## Constraints
 Android API 31+, no GMS/network requirement; foreground unlocked exchange only.
